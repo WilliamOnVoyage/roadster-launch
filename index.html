@@ -1160,7 +1160,17 @@ function initAudio() {
   const thrust = chain(noise(), 'lowpass', 420, .7, 0), hiss = chain(noise(), 'bandpass', 3200, 1.2, 0);
   // rocket roar: broadband noise, heaviest below 2 kHz, plus a sub rumble you feel more than hear
   const roar = chain(noise(), 'lowpass', 2600, .5, 0), rumble = chain(noise(), 'lowpass', 110, 1.2, 0), jet = chain(noise(), 'highpass', 1800, .4, 0);
-  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; master.disconnect(); master.connect(comp); comp.connect(ctx.destination);
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 4; master.disconnect(); master.connect(comp);
+  // phone speakers can't move air below ~150 Hz, and that energy only eats headroom: on touch devices cut it, lift the presence band
+  // so the chords and arpeggio read, and catch peaks with a limiter. Desktop output is untouched.
+  let out = ctx.destination;
+  if (matchMedia('(pointer:coarse)').matches) {
+    const bq = (type, f, q, g = 0) => { const n = ctx.createBiquadFilter(); n.type = type; n.frequency.value = f; n.Q.value = q; n.gain.value = g; return n; };
+    const hp = bq('highpass', 120, .7), mud = bq('peaking', 320, 1, -2.5), pres = bq('peaking', 2300, .9, 4.5), air = bq('highshelf', 6500, .7, 2), lift = ctx.createGain(); lift.gain.value = 1.35;
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -4; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = .002; lim.release.value = .12;
+    hp.connect(mud); mud.connect(pres); pres.connect(air); air.connect(lift); lift.connect(lim); lim.connect(ctx.destination); out = hp;
+  }
+  comp.connect(out);
   if (snd.recDest) comp.connect(snd.recDest); // master.disconnect() above also cut the replay's feed: without it the audio track starves and the MP4 timeline collapses to a second or two
   Object.assign(snd, { ctx, master, o1, o2, motor, wind, tyre, thrust, hiss, roar, rumble, jet, noiseBuf });
   if (window.VOICE_GJ) fetch(window.VOICE_GJ).then(r => r.arrayBuffer()).then(b => ctx.decodeAudioData(b)).then(buf => { snd.voiceGJ = buf; }).catch(() => {});
@@ -1486,9 +1496,24 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-function unlockAudio() { try { initAudio(); if (snd.ctx && snd.ctx.state !== 'running') snd.ctx.resume(); } catch (e) {}
-  if (snd.ctx && snd.ctx.state === 'running') for (const ev of UNLOCK) removeEventListener(ev, unlockAudio, true); }
-const UNLOCK = ['keydown', 'pointerdown', 'pointerup', 'touchend', 'click']; for (const ev of UNLOCK) addEventListener(ev, unlockAudio, true);
+// iPhones mute Web Audio when the ring/silent switch is on silent, but not media playback. Declare the page a media player
+// (Safari 17+: navigator.audioSession), and for older iOS loop a silent <audio> clip from the first touch, which moves the
+// page's audio session into the playback category so the score and effects play through the switch.
+const TOUCH = matchMedia('(pointer:coarse)').matches;
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+let silentEl = null, silentOn = !TOUCH;
+function silentLoop() {
+  if (silentOn || silentEl) return; const n = 4000, b = new Uint8Array(44 + n), v = new DataView(b.buffer), w = (o, t) => [...t].forEach((c, i) => b[o + i] = c.charCodeAt(0));
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+  let bin = ''; for (const x of b) bin += String.fromCharCode(x);
+  silentEl = document.createElement('audio'); silentEl.src = 'data:audio/wav;base64,' + btoa(bin); silentEl.loop = true; silentEl.setAttribute('playsinline', '');
+  const pr = silentEl.play(); if (pr && pr.then) pr.then(() => { silentOn = true; }, () => { silentEl = null; }); else silentOn = true; // refused outside a gesture: retried on the next touch
+}
+window.__audioDbg = () => ({ touch: TOUCH, silentEl: !!silentEl, silentOn, playing: !!silentEl && !silentEl.paused, session: navigator.audioSession ? navigator.audioSession.type : 'n/a', ctx: snd.ctx && snd.ctx.state });
+addEventListener('visibilitychange', () => { if (!document.hidden && snd.ctx && snd.ctx.state !== 'running') snd.ctx.resume().catch(() => {}); });
+function unlockAudio() { try { silentLoop(); initAudio(); if (snd.ctx && snd.ctx.state !== 'running') snd.ctx.resume(); } catch (e) {}
+  if (snd.ctx && snd.ctx.state === 'running' && silentOn) for (const ev of UNLOCK) removeEventListener(ev, unlockAudio, true); }
+const UNLOCK = ['keydown', 'pointerdown', 'pointerup', 'touchstart', 'touchend', 'click']; for (const ev of UNLOCK) addEventListener(ev, unlockAudio, true);
 function go() { running = true; unlockAudio(); spawn(); canvas.focus(); }
 go();
 window.__go = go; window.__snd = snd; window.__camTick = dt => updateCamera(dt); window.__fxTick = dt => { updateSmoke(dt); updateBillows(dt); updateVol(dt); updateCoils(dt); }; window.__vol = VOL; window.__obs = obstacles; window.__smokeCount = () => smoke.filter(k => k.s.visible).length + TR.n + BILL.list.length; window.__hero = hero; window.__heroTick = dt => { heroUpdate(dt); updateShock(dt); }; window.__hit = () => hitsObstacle(); window.__pts = () => carPts(); window.__st = st; window.__spawn = spawn; window.__keys = keys; window.__step = step; window.__showResult = showResult; window.__car = car; window.__cam = camera;
