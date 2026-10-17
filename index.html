@@ -102,6 +102,10 @@ canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
 #score{margin-top:4px;font:800 italic 22px var(--display);letter-spacing:.06em;font-variant-numeric:tabular-nums;background:linear-gradient(180deg,#fff 30%,#ffd36b 65%,#ff7a3d 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px rgba(255,140,50,.55))}
 #score{display:inline-block;transform-origin:right center;padding:0 .22em 0 .1em;margin-right:-.12em} /* italic overhang would be clipped by the gradient fill */
 #score.bump{animation:scoreBump .3s ease-out}
+#score.hit{animation:scoreHit .5s ease-out}
+@keyframes scoreHit{0%{transform:scale(1.6);filter:brightness(1.8) drop-shadow(0 0 22px rgba(255,200,90,1))}100%{transform:scale(1)}}
+.fly{position:fixed;left:0;top:0;z-index:6;pointer-events:none;white-space:nowrap;font:800 italic 34px var(--display);letter-spacing:.04em;padding:0 .2em;color:transparent;background:linear-gradient(180deg,#fff 0%,#fff3c4 40%,#ffd36b 65%,#ff7a3d 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 10px rgba(255,170,60,.95)) drop-shadow(0 0 26px rgba(255,110,30,.6));will-change:transform,opacity}
+.fly.big{font-size:52px}.fly.ghost{opacity:.35;filter:blur(2px) drop-shadow(0 0 14px rgba(255,140,40,.9))}
 @keyframes scoreBump{from{transform:scale(1.4)}to{transform:scale(1)}}
 #msg{position:fixed;left:50%;top:20%;transform:translateX(-50%);font-family:var(--display);font-size:clamp(20px,3.4vw,34px);letter-spacing:.2em;text-transform:uppercase;opacity:0;transition:opacity .25s;pointer-events:none;text-shadow:0 0 18px rgba(255,43,61,.6);white-space:nowrap}
 #start{position:fixed;inset:0;display:grid;justify-items:center;align-content:center;gap:0;padding:max(20px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));pointer-events:none;text-align:center;text-shadow:0 2px 14px rgba(0,0,0,.7);transition:opacity .4s}
@@ -590,7 +594,7 @@ function updateCoils(dt) {
       if (near) { // lightning onto the car: 1-3 bolts to points on the body, re-struck every ~60 ms
         const n = 1 + (rnd() * 2.6 | 0); for (let i = 0; i < n; i++) strike(c, c.bolts[i], V((rnd() - .5) * 1.6, rnd() * .9, (rnd() - .5) * 3.6).applyQuaternion(st.q).add(st.pos), .1, .028 + rnd() * .014, rnd() < .7 ? c.bolts[3 + i] : null);
         c.next = .045 + rnd() * .04; c.hit = .12; crackle(.25 + rnd() * .2);
-        if (!c.zapped && st.phase !== 'crashed') { c.zapped = true; addScore(150); missionMark('coils'); addPart('zaps', 150); pop('ZAPPED!', '+150', 'cool'); hitSound(2); }
+        if (!c.zapped && st.phase !== 'crashed') { c.zapped = true; addScore(150); missionMark('coils'); addPart('zaps', 150); pop('ZAPPED!', '', 'cool'); hitSound(2); }
       } else { // idle brush discharge into the air
         const a = rnd() * 6.283, out = c.top.clone().add(V(Math.cos(a) * (1.4 + rnd() * 1.6), rnd() * 1.6 - .2, Math.sin(a) * (1.4 + rnd() * 1.6)));
         strike(c, c.bolts[6], out, .09, .016); c.next = .25 + rnd() * 1.1; c.hit = Math.max(c.hit, .05); crackle(.05);
@@ -1142,7 +1146,7 @@ const WHEEL_CONTACT = [V(-.92, .02, 1.45), V(.92, .02, 1.45), V(-.92, .02, -1.42
 function spawn() {
   Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, crashWhy: '', maxV: 0 });
   if (st.world === 'mars') setWorld('earth'); MARS.done = false; st.rk = null; st.fuel = 100; st.marsAge = 0; entryEl.style.opacity = 0; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
-  msgEl.style.opacity = 0; msgT = 0; startShot(); setHint(''); st.score = 0; st.parts = {}; st.banked = 0; st.rampDone = false; st.mdone = {}; st.finishDone = false; st.summary = false; scoreEl.textContent = '0 PTS'; popsEl.innerHTML = ''; for (const c of COILS) c.zapped = false; // a restart starts clean: no leftover banner, the standard chase view straight back behind the car (any orbit or zoom dropped)
+  msgEl.style.opacity = 0; msgT = 0; startShot(); setHint(''); st.score = 0; st.parts = {}; st.banked = 0; st.rampDone = false; st.mdone = {}; st.finishDone = false; st.summary = false; scoreReset(); popsEl.innerHTML = ''; for (const c of COILS) c.zapped = false; // a restart starts clean: no leftover banner, the standard chase view straight back behind the car (any orbit or zoom dropped)
   for (const pr of props) { if (!pr.home) pr.home = [pr.w.position.clone(), pr.w.rotation.clone()]; pr.hit = false; pr.body = null; pr.w.position.copy(pr.home[0]); pr.w.rotation.copy(pr.home[1]); pr.w.updateMatrixWorld(true); pr.box.setFromObject(pr.w); }
   heroReset(); clearSmoke(); setTimeout(missionsUI, 0); document.body.classList.remove('resultup');
   st.pos.set(0, 0, START); if (GAR.mode === 'online') { const k = Math.floor(Math.random() * 15); st.pos.set([-7, -3.5, 0, 3.5, 7][k % 5], 0, START + 12 + Math.floor(k / 5) * 7); } /* behind the line the AI drivers start from */ st.q.copy(LEVEL); st.vel.set(0, 0, 0); st.w.set(0, 0, 0); floodOn[0] = floodOn[1] = 0; resEl.hidden = true; // online: a random slot on a 5-wide start grid
@@ -1991,7 +1995,7 @@ function missionsUI() {
 const MIS_FX = new Set();
 function misFx(k) { MIS_FX.add(k); const b = document.getElementById('misBtn'); b.classList.remove('fx'); void b.offsetWidth; b.classList.add('fx'); setTimeout(() => { MIS_FX.delete(k); missionsUI(); }, 1400); }
 function missionMark(k) { if (k) misFx(k); missionsUI(); }
-function missionDone(k, pts, title) { (st.mdone ||= {})[k] = true; addScore(pts); misFx(k); pop(title, '+' + pts.toLocaleString('en-US'), 'cool'); hitSound(6); missionsUI(); }
+function missionDone(k, pts, title) { (st.mdone ||= {})[k] = true; addScore(pts); misFx(k); pop(title, '', 'cool'); hitSound(6); missionsUI(); }
 document.getElementById('misBtn').onclick = e => { e.stopPropagation(); misEl.hidden = !misEl.hidden; store.set('rl_misOpen', !misEl.hidden); missionsUI(); };
 misEl.hidden = !store.get('rl_misOpen', !matchMedia('(pointer:coarse)').matches); // open on desktops, closed on phones until tapped
 subBtn.onclick = e => { e.stopPropagation(); openSummary(); };
@@ -2016,8 +2020,23 @@ function hitSound(k) { // a punchy thump plus a bright tick that climbs with the
   ng.gain.setValueAtTime(.25, t); ng.gain.exponentialRampToValueAtTime(.001, t + .07); n.connect(nf); nf.connect(ng); ng.connect(snd.master); n.start(t, rnd()); n.stop(t + .08);
 }
 function addPart(k, p) { (st.parts ||= {})[k] = (st.parts[k] || 0) + p; }
-function addScore(p) { st.score = (st.score || 0) + p; if (typeof subBtn !== 'undefined') subBtn.disabled = false; scoreEl.textContent = st.score.toLocaleString('en-US') + ' PTS'; scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump'); }
-function trick(name, pts, js) { js.combo++; js.pts += pts; const k = js.combo; pop(name, `+${pts}${k > 1 ? `  x${k}` : ''}`); hitSound(k); st.shake = Math.max(st.shake, .3 + .08 * k); }
+// only points that really count show a number: it flies from the middle of the screen into the total, which rolls up as it lands
+const SCORE_UI = { shown: 0, target: 0, raf: 0, next: 0, gen: 0 };
+function scoreReset() { SCORE_UI.gen++; SCORE_UI.shown = SCORE_UI.target = 0; cancelAnimationFrame(SCORE_UI.raf); for (const e of document.querySelectorAll('.fly')) e.remove(); scoreEl.textContent = '0 PTS'; }
+function scoreRoll() { cancelAnimationFrame(SCORE_UI.raf); const from = SCORE_UI.shown, to = SCORE_UI.target, t0 = performance.now();
+  const tick = now => { const u = Math.min(1, (now - t0) / 420); SCORE_UI.shown = Math.round(from + (to - from) * (1 - Math.pow(1 - u, 3))); scoreEl.textContent = SCORE_UI.shown.toLocaleString('en-US') + ' PTS'; if (u < 1) SCORE_UI.raf = requestAnimationFrame(tick); };
+  SCORE_UI.raf = requestAnimationFrame(tick); scoreEl.classList.remove('hit'); void scoreEl.offsetWidth; scoreEl.classList.add('hit'); }
+function scoreFly(p) {
+  const gen = SCORE_UI.gen, now = performance.now(), wait = Math.max(0, SCORE_UI.next - now); SCORE_UI.next = now + wait + 200; // several at once go one after another
+  setTimeout(() => { if (gen !== SCORE_UI.gen) return; const r = scoreEl.getBoundingClientRect(), x0 = innerWidth / 2, y0 = innerHeight * .4, x1 = r.right - 30, y1 = r.top + r.height / 2, big = p >= 1000;
+    const T = (x, y, k) => `translate(${x}px,${y}px) translate(-50%,-50%) scale(${k})`;
+    const frames = [{ transform: T(x0, y0 + 16, .4), opacity: 0 }, { transform: T(x0, y0, 1.15), opacity: 1, offset: .18 }, { transform: T(x0, y0 - 6, 1), opacity: 1, offset: .38 }, { transform: T(x1, y1, .42), opacity: .95 }];
+    const make = (ghost, delay) => { const d = document.createElement('div'); d.className = 'fly' + (big ? ' big' : '') + (ghost ? ' ghost' : ''); d.textContent = '+' + p.toLocaleString('en-US'); document.body.appendChild(d);
+      const a = d.animate(frames, { duration: 950, delay, easing: 'cubic-bezier(.45,0,.6,1)', fill: 'both' }); a.onfinish = () => { d.remove(); if (!ghost && gen === SCORE_UI.gen) { SCORE_UI.target += p; scoreRoll(); } }; };
+    make(true, 70); make(true, 35); make(false, 0); }, wait); // two faint copies trail it
+}
+function addScore(p) { st.score = (st.score || 0) + p; if (typeof subBtn !== 'undefined') subBtn.disabled = false; if (p > 0) scoreFly(p); }
+function trick(name, pts, js) { js.combo++; js.pts += pts; const k = js.combo; pop(name, k > 1 ? `COMBO x${k}` : ''); hitSound(k); st.shake = Math.max(st.shake, .3 + .08 * k); } // just the move: its points only count when the landing banks them
 function trickCheck(js) {
   if (st.phase === 'crashed') return;
   while (js.roll >= (js.rollN + 1) * Math.PI - .22) { js.rollN++; trick(ROLL_NAME(js.rollN), 100 * js.rollN, js); }      // each half roll is worth more than the last
@@ -2031,7 +2050,6 @@ function bankJump(js, clean) { // landing: air time + tricks, combo and clean-la
   const air = Math.round(Math.min(js.t, AIR_CAP) * 50), mult = Math.min(3, 1 + .25 * Math.max(0, js.combo - 1)) * (clean ? 1.5 : 1), fresh = Math.pow(JUMP_DECAY, st.banked || 0);
   const total = Math.round(Math.min(JUMP_CAP, (js.pts + air) * mult) * fresh / 10) * 10;
   if (total < 60) return; st.banked = (st.banked || 0) + 1; addScore(total); addPart('tricks', js.pts); addPart('air', air); addPart('style', total - js.pts - air);
-  pop('+' + total.toLocaleString('en-US'), '', 'big cool');
 }
 function countUp(el, to) { // the total rolls up with a ticking sound, then lands with a punch
   if (!el) return; const span = el.querySelector('span'), t0 = performance.now(), dur = Math.min(1300, 450 + to / 6); let lastTick = 0;
@@ -2441,8 +2459,8 @@ function updateRings(dt, t) {
     if (R.prev !== null && R.prev < 0 && d >= 0) { // crossed the gate's plane, going the right way
       if (rel.addScaledVector(R.n, -d).length() < R.r) { R.done = true; RINGS.got++; RINGS.streak++; const k = RINGS.streak, pts = Math.round(250 * (1 + .25 * (k - 1)) / 10) * 10;
         addScore(pts); ringBurst(R); hitSound(Math.min(8, 2 + k)); st.shake = Math.max(st.shake, .6);
-        pop(`RING ${RINGS.got}/${RINGS.N}`, `+${pts}${k > 1 ? `  x${k}` : ''}`, 'cool');
-        missionMark('rings'); if (RINGS.got === RINGS.N) setTimeout(() => { addScore(1500); pop('PERFECT PATH!', '+1,500', 'big cool'); hitSound(8); }, 500); }
+        pop(`RING ${RINGS.got}/${RINGS.N}`, k > 1 ? `STREAK x${k}` : '', 'cool');
+        missionMark('rings'); if (RINGS.got === RINGS.N) setTimeout(() => { addScore(1500); pop('PERFECT PATH!', '', 'big cool'); hitSound(8); }, 500); }
       else RINGS.streak = 0; // flew past it: the run of gates is broken
     }
     R.prev = d;
