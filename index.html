@@ -1145,7 +1145,7 @@ const smooth = x => x * x * x * (x * (x * 6 - 15) + 10), clamp01 = x => Math.max
 const cueEl = document.getElementById('cue'), resEl = document.getElementById('result');
 const WHEEL_CONTACT = [V(-.92, .02, 1.45), V(.92, .02, 1.45), V(-.92, .02, -1.42), V(.92, .02, -1.42)];
 function spawn() {
-  Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, crashWhy: '', maxV: 0 });
+  Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, clockDone: false, crashWhy: '', maxV: 0, runId: (st.runId || 0) + 1 });
   if (st.world === 'mars') setWorld('earth'); marsGuardReset(); MARS.done = false; st.rk = null; st.fuel = 100; st.marsAge = 0; entryEl.style.opacity = 0; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
   msgEl.style.opacity = 0; msgT = 0; startShot(); setHint(''); st.score = 0; st.parts = {}; st.banked = 0; st.rampDone = false; st.mdone = {}; st.finishDone = false; st.summary = false; scoreReset(); popsEl.innerHTML = ''; for (const c of COILS) c.zapped = false; // a restart starts clean: no leftover banner, the standard chase view straight back behind the car (any orbit or zoom dropped)
   for (const pr of props) { if (!pr.home) pr.home = [pr.w.position.clone(), pr.w.rotation.clone()]; pr.hit = false; pr.body = null; pr.w.position.copy(pr.home[0]); pr.w.rotation.copy(pr.home[1]); pr.w.updateMatrixWorld(true); pr.box.setFromObject(pr.w); }
@@ -1349,7 +1349,7 @@ function updateProps(dt) {
 }
 function crash(why) {
   if (st.phase === 'crashed') return;
-  const wasAir = st.mode === 'air'; if (st.mode !== 'air' && st.vel.lengthSq() < 1) st.vel.copy(fwdOf(st.yaw || 0)).multiplyScalar(st.v);
+  const wasAir = (st.mode === 'air' || st.mode === 'rocket') && !!st.js; if (!wasAir && st.vel.lengthSq() < 1) st.vel.copy(fwdOf(st.yaw || 0)).multiplyScalar(st.v);
   st.phase = 'crashed'; st.mode = 'crashed'; st.crashWhy = why; track('crash'); coach.last = CRASH_KIND(why); store.set('rl_lastCrash', coach.last); setHint('');
   carBody.setFrom(st.pos, st.q, st.vel, st.w.clone().applyQuaternion(st.q).add(V((rnd() - .5) * 1.5, (rnd() - .5) * 1, (rnd() - .5) * 1.5))); st.shake = 1.4; landFx(); flash('CRASH · ' + why, 3);
   st.jumps.push(wasAir ? { ...st.js, grade: 'CRASH' } : { t: 0, maxH: 0, grade: 'CRASH' }); st.crashT = 0;
@@ -1375,9 +1375,10 @@ function land() {
   if (rolls >= .5) bits.push(rolls + ' Roll' + (rolls > 1 ? 's' : '')); if (flips >= .5) bits.push(flips + ' Flip' + (flips > 1 ? 's' : ''));
   if (js.t > .4) flash((clean ? 'Clean Landing!! ' : 'Hard Landing! ') + bits.join(', '), 2.4, true);
   bankJump(js, clean); if (st.world === 'mars' && !MARS.done) marsLanded();
-  if (js.fromLip && !st.rampDone) { st.rampDone = true; setTimeout(() => missionDone('ramp', 1500, 'C-RAMP CONQUERED!'), 300); } // one-off mission
-  if (st.pos.z > LINEUP_Z + 16 && js.x0 < LINEUP_Z && !st.cleared) { st.cleared = true; addPart('lineup', 1000); setTimeout(() => missionDone('lineup', 1000, 'CLEARED THE LINE-UP!'), 450); }
+  if (!mars && js.fromLip && !st.rampDone) { st.rampDone = true; later(300, () => missionDone('ramp', 1500, 'C-RAMP CONQUERED!')); } // one-off mission (a flight off the lip that ends on Mars is the Mars mission, not this one)
+  if (!mars && js.over && st.pos.z > LINEUP_Z + 16 && js.x0 < LINEUP_Z && !st.cleared) { st.cleared = true; addPart('lineup', 1000); later(450, () => missionDone('lineup', 1000, 'CLEARED THE LINE-UP!')); } // over the cars, not beside them
 }
+function later(ms, fn) { const id = st.runId; setTimeout(() => { if (st.runId === id) fn(); }, ms); } // a delayed reward lands in the run that earned it, not the next one after a quick restart
 function takeOff(vel) { st.mode = 'air'; st.phase = 'air'; st.vel.copy(vel); st.js = newJumpStats(); st.tricks = { z: null, x: null }; st.popT = 0; }
 function step(dt) {
   const finale = st.finished && hero.state !== 'off'; // the run's over and the pilot is on his way: no controls until his scene is done
@@ -1385,7 +1386,7 @@ function step(dt) {
   const thr = !lobby && !finale && !!(keys.KeyW || keys.ArrowUp && false), brk = !lobby && !finale && !!keys.KeyS, lift = !lobby && !finale && !!keys.Space, // the pilot's scene plays out untouched: you watch it
     rollIn = 0, pitchIn = 0;
   if (st.phase === 'ready') { if (thr || lift || brk) { st.phase = 'drive'; coach.runs++; track('run'); store.set('rl_runs', coach.runs); flash('Go', .6); document.getElementById('start').classList.add('off'); recStart(); } }
-  if (st.phase !== 'ready' && st.phase !== 'done' && st.phase !== 'crashed' && !st.finished) { st.time += dt; st.maxV = Math.max(st.maxV || 0, st.mode === 'air' ? st.vel.length() : st.v); }
+  if (st.phase !== 'ready' && st.phase !== 'done' && st.phase !== 'crashed') { if (!st.clockDone) st.time += dt; st.maxV = Math.max(st.maxV || 0, st.mode === 'air' || st.mode === 'rocket' ? st.vel.length() : Math.abs(st.v)); } // the run's time stops at its goal; top speed keeps counting
   let jets = [0, 0, 0, 0], side = [0, 0], boost = false;
   if (st.world === 'mars') { st.marsAge = (st.marsAge || 0) + dt; if (st.marsAge < 4.5 && (st.mode === 'air' || st.mode === 'rocket')) { // the thick upper air: drag pulls you down to ~80 m/s, then thins out
     const k = 1 - smooth(clamp01((st.marsAge - 2.5) / 2)), e = Math.exp(-.8 * k * dt); st.vel.x *= e; st.vel.z *= e; st.vel.y += (-80 - st.vel.y) * (1 - Math.exp(-1.1 * k * dt)); st.shake = Math.max(st.shake, .7 * k); } }
@@ -1410,7 +1411,8 @@ function step(dt) {
     if (st.mode === 'crashed') return;
     if (lift && st.mode === 'ground') { jets = [1, 1, 1, 1]; takeOff(V(0, .5, 0).addScaledVector(F, st.v)); st.popT = .3; }
     { const h = hitsObstacle(); if (h.length) { smash(h); crash('ploughed into the line-up'); } }
-    if (st.world !== 'mars' && st.phase === 'drive' && st.vel.z > 0 && st.pos.z > FINISH_Z && !st.finishDone) { st.finishDone = true; missionDone('finish', 500, 'FINISH LINE!'); if (st.cleared) { st.finished = true; heroStart(); } } // the pilot's welcome plays once; the run carries on
+    if (st.world !== 'mars' && st.phase === 'drive' && st.dir > 0 && st.v > 0 && st.pos.z > FINISH_Z && st.rampDone && !st.finishDone) { st.finishDone = true; missionDone('finish', 500, 'FINISH LINE!'); // forwards, after the C-ramp: no U-turn or reversing shortcut
+      if (st.cleared) { st.clockDone = true; const best = store.get('rl_best', 0); if (!best || st.time < best) store.set('rl_best', st.time); if (heroStart()) st.finished = true; } } // the pilot's welcome plays once (if his model loaded); the run carries on
     if (st.finished && hero.state !== 'off') { st.v = Math.max(0, st.v - Math.max(1.5, 1.2 * st.v) * dt); if (st.v > 1) jets = [0, 0, 0, 0]; } // run's over: retro-jets ease it to a stop, firm at first, gentle at the end
   } else if (st.mode === 'ramp') {
     // on the deck: gravity along it, drag, throttle; the fans hold it on (FAN_G), so it only comes off if it stalls or reaches the lip
@@ -1507,6 +1509,7 @@ function step(dt) {
   if (jets.some(x => x)) groundWash(Math.max(...jets) * .9);
   if (boost) { emitRear(st.mode === 'ramp' ? .25 : .9); st.shake = Math.max(st.shake, .25); }
   if (st.mode === 'ground' && thr && st.v < 14 && st.v > .1) for (const w of WHEEL_CONTACT.slice(0, 2)) if (rnd() < .6) puff(w.clone().add(st.pos).add(V(0, .3, 0)), V((rnd() - .5) * 2, .8, 4 + rnd() * 3), .5, 2.6, 0xc4c9d1, .5, 3);
+  if (st.js && st.world !== 'mars' && (st.mode === 'air' || st.mode === 'rocket') && Math.abs(st.pos.x) < 4.5 && st.pos.z > LINEUP_Z - .9 && st.pos.z < LINEUP_Z + 16.1) st.js.over = true; // flew over the line-up
   if (st.world !== 'mars' && (st.mode === 'air' || st.mode === 'rocket') && st.pos.distanceTo(MARS_C) < MARS_R * 1.1) arriveMars(); // into Mars' air: straight on, no cut
   bumpOthers(dt);
   updateHints();
@@ -1667,6 +1670,7 @@ function shareText(rolls, flips) {
     : st.phase === 'crashed' && st.world === 'mars' ? `So close: my Roadster made it to Mars and ${st.crashWhy} 💥 Can you land it?`
     : st.phase === 'crashed' ? `My Roadster ${st.crashWhy} 💥 Can you land the launch-night stunt?`
     : st.cleared ? 'I flew the Roadster over the line-up 🚀 Can you beat it?'
+    : !st.finishDone ? 'Mid-run in Roadster Launch and still flying 🚀 Can you beat my score?'
     : 'I got the Roadster through the launch but missed the line-up 😅 Can you clear it?';
   return `${head}\n🏁 ${st.score ? st.score.toLocaleString('en-US') + ' pts · ' : ''}${runStats(rolls, flips).join(' · ')}`;
 }
@@ -2013,8 +2017,9 @@ function missionDone(k, pts, title) { (st.mdone ||= {})[k] = true; addScore(pts)
 document.getElementById('misBtn').onclick = e => { e.stopPropagation(); misEl.hidden = !misEl.hidden; store.set('rl_misOpen', !misEl.hidden); missionsUI(); };
 misEl.hidden = !store.get('rl_misOpen', !matchMedia('(pointer:coarse)').matches); // open on desktops, closed on phones until tapped
 subBtn.onclick = e => { e.stopPropagation(); openSummary(); };
-function openSummary() { if (!(st.score > 0) || !resEl.hidden || st.phase === 'crashed') return; st.summary = true; showResult(); }
-function closeSummary() { st.summary = false; resEl.hidden = true; document.body.classList.remove('resultup'); canvas.focus(); }
+function openSummary() { if (!(st.score > 0) || !resEl.hidden || st.phase === 'crashed') return; st.summary = true; showResult();
+  try { if (REC.r && REC.r.state === 'recording') { REC.r.pause(); REC.pausedAt = performance.now(); } } catch (e) {} } // no frozen stretch in the replay
+function closeSummary() { try { if (REC.r && REC.r.state === 'paused') { REC.r.resume(); REC.t0 += performance.now() - REC.pausedAt; } } catch (e) {} st.summary = false; resEl.hidden = true; document.body.classList.remove('resultup'); canvas.focus(); }
 /* ============ trick pops and score: every half roll / full flip pops a punchy call-out, combos multiply, the landing banks it ============ */
 const popsEl = document.getElementById('pops'), scoreEl = document.getElementById('score');
 const ROLL_NAME = n => ['', 'ROLL OUT!', 'BARREL ROLL!', '1.5 ROLLS!', 'DOUBLE ROLL!!', '2.5 ROLLS!', 'TRIPLE ROLL!!!'][n] || `${n / 2} ROLLS!!!`;
@@ -2079,9 +2084,8 @@ function showResult() {
   let h;
   msgEl.style.opacity = 0; msgT = 0; popsEl.innerHTML = ''; document.getElementById('start').classList.add('off'); // the result band replaces the crash / finish banner and the title card
   const score = st.score || 0, prevBest = store.get('rl_bestScore', 0); if (score > prevBest) store.set('rl_bestScore', score);
-  let tip = '', best = store.get('rl_best', 0), badge = score > prevBest && prevBest > 0 ? '<div class="best-new">NEW BEST</div>' : '';
+  let tip = '', badge = score > prevBest && prevBest > 0 ? '<div class="best-new">NEW BEST</div>' : '';
   const legend = MISSIONS.filter(m => !m.soon).every(misDone); // every mission in one run: the big one
-  if (st.cleared && (!best || st.time < best)) { best = st.time; store.set('rl_best', best); }
   if (legend) h = 'ALL MISSIONS <span>COMPLETE</span>';
   else if (st.phase === 'crashed') { h = '<span>CRASHED</span>'; tip = CRASH_TIP[CRASH_KIND(st.crashWhy)]; }
   else h = 'YOUR <span>RUN</span>';
@@ -2488,7 +2492,7 @@ function updateRings(dt, t) {
       if (rel.addScaledVector(R.n, -d).length() < R.r) { R.done = true; RINGS.got++; RINGS.streak++; const k = RINGS.streak, pts = Math.round(250 * (1 + .25 * (k - 1)) / 10) * 10;
         addScore(pts); ringBurst(R); hitSound(Math.min(8, 2 + k)); st.shake = Math.max(st.shake, .6);
         pop(`RING ${RINGS.got}/${RINGS.N}`, k > 1 ? `STREAK x${k}` : '', 'cool');
-        missionMark('rings'); if (RINGS.got === RINGS.N) setTimeout(() => { addScore(1500); pop('PERFECT PATH!', '', 'big cool'); hitSound(8); }, 500); }
+        missionMark('rings'); if (RINGS.got === RINGS.N) later(500, () => { addScore(1500); pop('PERFECT PATH!', '', 'big cool'); hitSound(8); }); }
       else RINGS.streak = 0; // flew past it: the run of gates is broken
     }
     R.prev = d;
@@ -2752,7 +2756,7 @@ function stepWarp(dt) {
     warpEl.className = ''; wflashEl.className = 'out'; setTimeout(() => { pop('WELCOME TO MARS', '0.38 g', 'cool'); }, 700); }
 }
 function marsLanded() {
-  track('land'); MARS.done = true; addScore(5000); missionMark('mars');
+  track('land'); MARS.done = true; st.clockDone = true; addScore(5000); missionMark('mars');
   const tv = st.touchVy || 0, grade = tv < 3 ? ['PERFECT TOUCHDOWN', 3000] : tv < 6 ? ['TOUCHDOWN', 1500] : ['HARD TOUCHDOWN', 400], onRwy = Math.abs(st.pos.x) < 15 && st.pos.z > MARS_Z - 60 && st.pos.z < MARS_Z + 640;
   addScore(grade[1] + (onRwy ? 2000 : 0)); marsWinEl.querySelector('i').innerHTML = `${grade[0]}  +${(5000 + grade[1] + (onRwy ? 2000 : 0)).toLocaleString('en-US')}${onRwy ? '<small>ON THE RUNWAY</small>' : ''}`; msgEl.style.opacity = 0; msgT = 0; popsEl.innerHTML = ''; // the title owns the screen
   marsWinEl.className = 'on'; st.shake = 2.6; shockRing.position.set(st.pos.x, .05, st.pos.z); shockRing.userData.t = 0; shockRing.visible = true;
