@@ -1146,7 +1146,7 @@ const smooth = x => x * x * x * (x * (x * 6 - 15) + 10), clamp01 = x => Math.max
 const cueEl = document.getElementById('cue'), resEl = document.getElementById('result');
 const WHEEL_CONTACT = [V(-.92, .02, 1.45), V(.92, .02, 1.45), V(-.92, .02, -1.42), V(.92, .02, -1.42)];
 function spawn() {
-  Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, clockDone: false, crashWhy: '', maxV: 0, runId: (st.runId || 0) + 1 });
+  Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, clockDone: false, sumT: 0, crashWhy: '', maxV: 0, runId: (st.runId || 0) + 1 });
   if (st.world === 'mars') setWorld('earth'); marsGuardReset(); MARS.done = false; st.rk = null; st.fuel = 100; st.marsAge = 0; entryEl.style.opacity = 0; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
   msgEl.style.opacity = 0; msgT = 0; startShot(); setHint(''); st.score = 0; st.parts = {}; st.banked = 0; st.rampDone = false; st.mdone = {}; st.finishDone = false; st.summary = false; scoreReset(); popsEl.innerHTML = ''; for (const c of COILS) c.zapped = false; // a restart starts clean: no leftover banner, the standard chase view straight back behind the car (any orbit or zoom dropped)
   for (const pr of props) { if (!pr.home) pr.home = [pr.w.position.clone(), pr.w.rotation.clone()]; pr.hit = false; pr.body = null; pr.w.position.copy(pr.home[0]); pr.w.rotation.copy(pr.home[1]); pr.w.updateMatrixWorld(true); pr.box.setFromObject(pr.w); }
@@ -1258,7 +1258,7 @@ function heroUpdate(dt) {
   } else if (hero.state === 'land') {
     hero.light.intensity *= Math.exp(-4 * dt);
     if (hero.t > .9 && !hero.said) { hero.said = true; shout(); }
-    if (hero.t > 3.4) { hero.state = 'done'; st.finished = false; } // he stays standing there; control comes back, and the camera eases back behind the car (no cut)
+    if (hero.t > 3.4) { hero.state = 'done'; st.finished = false; openSummary(); } // he stays standing there and the run summary comes up; Keep driving hands control back, and the camera eases back behind the car (no cut)
   }
 }
 function groundWashAt(P, k) { if (rnd() < k) { const a = rnd() * 6.283, sp = 5 + rnd() * 7; puff(V(P.x + Math.cos(a) * .6, .3, P.z + Math.sin(a) * .6), V(Math.cos(a) * sp, .3 + rnd() * .6, Math.sin(a) * sp), .8 + rnd() * .5, 2.5 + rnd(), 0xe9edf1, .45, 1.5, true); } }
@@ -1388,6 +1388,7 @@ function step(dt) {
     rollIn = 0, pitchIn = 0;
   if (st.phase === 'ready') { if (thr || lift || brk) { st.phase = 'drive'; coach.runs++; track('run'); store.set('rl_runs', coach.runs); flash('Go', .6); document.getElementById('start').classList.add('off'); recStart(); } }
   if (st.phase !== 'ready' && st.phase !== 'done' && st.phase !== 'crashed') { if (!st.clockDone) st.time += dt; st.maxV = Math.max(st.maxV || 0, st.mode === 'air' || st.mode === 'rocket' ? st.vel.length() : Math.abs(st.v)); } // the run's time stops at its goal; top speed keeps counting
+  if (st.sumT > 0 && (st.sumT -= dt) <= 0 && st.phase !== 'crashed') openSummary(); // after a Mars touchdown: the run summary, unless it crashed meanwhile
   let jets = [0, 0, 0, 0], side = [0, 0], boost = false;
   if (st.world === 'mars') { st.marsAge = (st.marsAge || 0) + dt; if (st.marsAge < 4.5 && (st.mode === 'air' || st.mode === 'rocket')) { // the thick upper air: drag pulls you down to ~80 m/s, then thins out
     const k = 1 - smooth(clamp01((st.marsAge - 2.5) / 2)), e = Math.exp(-.8 * k * dt); st.vel.x *= e; st.vel.z *= e; st.vel.y += (-80 - st.vel.y) * (1 - Math.exp(-1.1 * k * dt)); st.shake = Math.max(st.shake, .7 * k); } }
@@ -2760,7 +2761,7 @@ function stepWarp(dt) {
     warpEl.className = ''; wflashEl.className = 'out'; setTimeout(() => { pop('WELCOME TO MARS', '0.38 g', 'cool'); }, 700); }
 }
 function marsLanded() {
-  track('land'); MARS.done = true; st.clockDone = true; addScore(5000); missionMark('mars');
+  track('land'); MARS.done = true; st.clockDone = true; st.sumT = 3.3; addScore(5000); missionMark('mars'); // sumT: the run summary follows the touchdown title (3.2 s), in game time
   const tv = st.touchVy || 0, grade = tv < 3 ? ['PERFECT TOUCHDOWN', 3000] : tv < 6 ? ['TOUCHDOWN', 1500] : ['HARD TOUCHDOWN', 400], onRwy = Math.abs(st.pos.x) < 15 && st.pos.z > MARS_Z - 60 && st.pos.z < MARS_Z + 640;
   addScore(grade[1] + (onRwy ? 2000 : 0)); marsWinEl.querySelector('i').innerHTML = `${grade[0]}  +${(5000 + grade[1] + (onRwy ? 2000 : 0)).toLocaleString('en-US')}${onRwy ? '<small>ON THE RUNWAY</small>' : ''}`; msgEl.style.opacity = 0; msgT = 0; popsEl.innerHTML = ''; // the title owns the screen
   marsWinEl.className = 'on'; st.shake = 2.6; shockRing.position.set(st.pos.x, .05, st.pos.z); shockRing.userData.t = 0; shockRing.visible = true;
@@ -2886,7 +2887,7 @@ function frame(now) {
   const raw = (now - last) / 1000, dt = Math.min(.033, raw); last = now;
   if (window.__pause) { smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); requestAnimationFrame(frame); return; } // test hook: render only, the sim is stepped by hand
   const held = st.summary || !lbEl.hidden; // the score card or the leaderboard is up: the run waits
-  dynRes(raw); if (running && !held) for (let i = 0; i < 4; i++) step(dt / 4); // the score card pauses the run
+  dynRes(raw); if (running && !held) for (let i = 0; i < 4 && !st.summary; i++) step(dt / 4); // the score card pauses the run
   ambT += dt; if (ambT > .12) { ambT = 0; const m = machines[(rnd() * machines.length) | 0]; puff(m.clone().add(V((rnd() - .5) * 4, 0, 0)), V((rnd() - .5) * 2, .4, 2 + rnd() * 2), 2.5, 9, rnd() < .35 ? 0xc87c86 : 0xaab1bb, .32, 2.2); }
   updateSmoke(dt); updateBillows(dt); updateVol(dt); updateProps(dt); if (!held) heroUpdate(dt); updateShock(dt); updateCrowd(dt, now / 1000); updateGlow(now / 1000); updateCoils(dt); updateMars(); updateEntry(); touchUI(); updateSky(dt, now / 1000); updateRings(dt, now / 1000); updateProgress(); updateFloods(dt); updateCamera(dt); updateAudio(); smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); recFrame(); dashFrame(); netTick(now); aiTick(now);
   if (smokePass.enabled) { slowT = (now - last0) > 25 ? slowT + dt : Math.max(0, slowT - dt); if (slowT > 1) smokePass.degrade(); } last0 = now;
