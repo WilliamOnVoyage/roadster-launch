@@ -1411,7 +1411,7 @@ function step(dt) {
     if (st.mode === 'crashed') return;
     if (lift && st.mode === 'ground') { jets = [1, 1, 1, 1]; takeOff(V(0, .5, 0).addScaledVector(F, st.v)); st.popT = .3; }
     { const h = hitsObstacle(); if (h.length) { smash(h); crash('ploughed into the line-up'); } }
-    if (st.world !== 'mars' && st.phase === 'drive' && st.dir > 0 && st.v > 0 && st.pos.z > FINISH_Z && st.rampDone && !st.finishDone) { st.finishDone = true; missionDone('finish', 500, 'FINISH LINE!'); // forwards, after the C-ramp: no U-turn or reversing shortcut
+    if (st.world !== 'mars' && st.phase === 'drive' && st.dir > 0 && st.v > 0 && st.pos.z > FINISH_Z && !st.finishDone) { st.finishDone = true; missionDone('finish', 500, 'FINISH LINE!'); // driving forwards over it (backing over doesn't count); the course stays open, the C-ramp isn't required
       if (st.cleared) { st.clockDone = true; const best = store.get('rl_best', 0); if (!best || st.time < best) store.set('rl_best', st.time); if (heroStart()) st.finished = true; } } // the pilot's welcome plays once (if his model loaded); the run carries on
     if (st.finished && hero.state !== 'off') { st.v = Math.max(0, st.v - Math.max(1.5, 1.2 * st.v) * dt); if (st.v > 1) jets = [0, 0, 0, 0]; } // run's over: retro-jets ease it to a stop, firm at first, gentle at the end
   } else if (st.mode === 'ramp') {
