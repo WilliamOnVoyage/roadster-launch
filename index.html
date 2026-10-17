@@ -2158,22 +2158,34 @@ function startMusic() {
   }
   setInterval(sched, 50); sched();
 }
+function rocketCrackle(g0) { // the pops in a rocket's roar: a few milliseconds of band-passed noise at random
+  const c = snd.ctx, t = c.currentTime + Math.random() * .016, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); n.buffer = snd.noiseBuf;
+  f.type = 'bandpass'; f.frequency.value = 450 + Math.random() * 1300; f.Q.value = 1.4; g.gain.setValueAtTime(g0, t); g.gain.exponentialRampToValueAtTime(.001, t + .015 + Math.random() * .035);
+  n.connect(f); f.connect(g); g.connect(snd.master); n.start(t, Math.random() * 1.9); n.stop(t + .06);
+}
 function updateAudio() {
   if (!snd.ctx) return; const t = snd.ctx.currentTime, r = .06;
-  const sp = st.mode === 'air' ? st.vel.length() : Math.abs(st.v), thr = keys.KeyW || keys.ArrowUp;
+  const rk = st.mode === 'rocket', sp = st.mode === 'air' || rk ? st.vel.length() : Math.abs(st.v), thr = keys.KeyW || keys.ArrowUp;
   const boost = rearFlame[0].material.opacity, lift = liftGlow[0].material.opacity;
-  const groundish = st.mode !== 'air';
+  const groundish = st.mode !== 'air' && !rk; // no motor whine or tyre noise up in a rocket
   snd.master.gain.setTargetAtTime(snd.on ? .55 : 0, t, .05);
   const f = 60 + sp * 9; snd.o1.frequency.setTargetAtTime(f, t, r); snd.o2.frequency.setTargetAtTime(f * 1.5, t, r);
-  snd.motor.g.gain.setTargetAtTime(groundish ? .05 + (thr ? .07 : 0) + Math.min(.06, sp * .001) : .02, t, r); snd.motor.fl.frequency.setTargetAtTime(500 + sp * 30, t, r);
-  snd.wind.g.gain.setTargetAtTime(Math.min(.32, sp * sp * .00006), t, r); snd.wind.fl.frequency.setTargetAtTime(600 + sp * 12, t, r);
+  snd.motor.g.gain.setTargetAtTime(groundish ? .05 + (thr ? .07 : 0) + Math.min(.06, sp * .001) : rk ? 0 : .02, t, r); snd.motor.fl.frequency.setTargetAtTime(500 + sp * 30, t, r);
+  const vac = rk ? (st.world === 'mars' ? .5 : smooth(clamp01((st.pos.y - 150) / 450))) : 0; // thin air or none: everything duller
+  snd.wind.g.gain.setTargetAtTime(Math.min(.32, sp * sp * .00006) * (1 - vac * .9), t, r); snd.wind.fl.frequency.setTargetAtTime(600 + Math.min(sp, 120) * 12, t, r);
   const skid = groundish && (Math.abs(st.slip) > .08 || (thr && st.v < 14 && st.v > .5)) ? .11 : 0; snd.tyre.g.gain.setTargetAtTime(skid, t, .04);
   snd.thrust.g.gain.setTargetAtTime(boost * .55 + lift * .5, t, .03); snd.thrust.fl.frequency.setTargetAtTime(380 + boost * 320 + lift * 220 + Math.min(500, sp * 4), t, .05);
   snd.hiss.g.gain.setTargetAtTime(lift * .16 + boost * .08, t, .03);
   const launchK = Math.max(0, 1 - sp / 40);
+  if (rk) { // rocket: a deep, ragged roar with crackle, not a hiss; it dulls as the air thins so a long burn doesn't wear you out
+    const wob = 1 + (Math.random() - .5) * .3; snd.thrust.g.gain.setTargetAtTime(boost * .5, t, .03); snd.thrust.fl.frequency.setTargetAtTime(240 + boost * 140, t, .05);
+    snd.roar.g.gain.setTargetAtTime(boost * (.4 - .22 * vac) * wob, t, .025); snd.roar.fl.frequency.setTargetAtTime((1050 - 560 * vac) * (1 + (Math.random() - .5) * .2), t, .04);
+    snd.rumble.g.gain.setTargetAtTime(boost * (1.05 - .3 * vac) * wob, t, .04); snd.hiss.g.gain.setTargetAtTime(boost * .015, t, .05);
+    if (boost > .3 && snd.on && Math.random() < .5) rocketCrackle(.04 + Math.random() * .09 * (1 - .7 * vac));
+  } else {
   snd.roar.g.gain.setTargetAtTime((boost * (.55 + .5 * launchK) + lift * .35) * .7, t, .03); // kept under the score so the music still reads at full boost
   snd.roar.fl.frequency.setTargetAtTime(1800 + boost * 1400 + lift * 900, t, .05);
-  snd.rumble.g.gain.setTargetAtTime(boost * (.9 + launchK) + lift * .8, t, .05);
+  snd.rumble.g.gain.setTargetAtTime(boost * (.9 + launchK) + lift * .8, t, .05); }
   snd.jet.g.gain.setTargetAtTime(lift * .28, t, .03);
   if (snd.music) snd.music.gain.setTargetAtTime(snd.on ? 1.1 : 0, t, .2);
 }
@@ -2656,7 +2668,7 @@ function toggleRocket() {
   if (st.mode === 'rocket') { st.mode = 'air'; st.phase = 'air'; st.levelT = 1.2; st.tricks = { z: null, x: null }; st.js = st.js || newJumpStats(); pop('CAR MODE', st.world === 'mars' ? 'land it gently' : '', 'cool'); hitSound(3); return; }
   if (st.mode === 'air' && (st.world === 'mars' || st.pos.y > 12)) {
     camRel.copy(camPos).sub(st.pos); st.mode = 'rocket'; st.rk = { t: 0, p0: st.pos.clone(), prog: 0, back: fwdOf(st.yaw || 0).negate(), entry: 0, mars: st.world === 'mars' }; pop('ROCKET MODE', st.world === 'mars' ? '' : TOUCH_UI ? 'hold BURN' : 'hold W to burn', 'cool'); hitSound(5);
-    if (snd.ctx && snd.on) { const c = snd.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(60, t); o.frequency.exponentialRampToValueAtTime(240, t + .5); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.25, t + .05); g.gain.exponentialRampToValueAtTime(.001, t + .7); o.connect(g); g.connect(snd.master); o.start(t); o.stop(t + .75); } }
+    if (snd.ctx && snd.on) { const c = snd.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(48, t); o.frequency.exponentialRampToValueAtTime(150, t + .5); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.3, t + .05); g.gain.exponentialRampToValueAtTime(.001, t + .7); o.connect(g); g.connect(snd.master); o.start(t); o.stop(t + .75); } }
 }
 const LAND_MIN = 200; // landing mode (tail down) only switches on above this height: lower down there's no room left to stop
 function arriveMars() { // into Mars' air without a cut: the car keeps its attitude, speed and camera, now high over the runway inside the glowing haze, and the air brakes it
