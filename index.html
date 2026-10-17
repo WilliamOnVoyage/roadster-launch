@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<script>window.__eq = []; addEventListener('error', e => __eq.push({ msg: String(e.message || e.error || 'error'), at: (e.filename || '').split('/').pop() + ':' + (e.lineno || 0) + ':' + (e.colno || 0) })); addEventListener('unhandledrejection', e => __eq.push({ msg: 'promise: ' + String((e.reason && (e.reason.message || e.reason)) || 'rejected'), at: '' }));</script>
 <script>if (/(^|\.)github\.io$|^www\./.test(location.hostname)) location.replace('https://roadsterarena.dev/' + location.search + location.hash); // the old GitHub Pages address (and www) forward to the real one</script>
 <title>Roadster Launch</title>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -1349,7 +1350,7 @@ function updateProps(dt) {
 function crash(why) {
   if (st.phase === 'crashed') return;
   const wasAir = st.mode === 'air'; if (st.mode !== 'air' && st.vel.lengthSq() < 1) st.vel.copy(fwdOf(st.yaw || 0)).multiplyScalar(st.v);
-  st.phase = 'crashed'; st.mode = 'crashed'; st.crashWhy = why; coach.last = CRASH_KIND(why); store.set('rl_lastCrash', coach.last); setHint('');
+  st.phase = 'crashed'; st.mode = 'crashed'; st.crashWhy = why; track('crash'); coach.last = CRASH_KIND(why); store.set('rl_lastCrash', coach.last); setHint('');
   carBody.setFrom(st.pos, st.q, st.vel, st.w.clone().applyQuaternion(st.q).add(V((rnd() - .5) * 1.5, (rnd() - .5) * 1, (rnd() - .5) * 1.5))); st.shake = 1.4; landFx(); flash('CRASH · ' + why, 3);
   st.jumps.push(wasAir ? { ...st.js, grade: 'CRASH' } : { t: 0, maxH: 0, grade: 'CRASH' }); st.crashT = 0;
 }
@@ -1383,7 +1384,7 @@ function step(dt) {
   const lobby = document.body.classList.contains('lobby'); // garage up: the car waits for START
   const thr = !lobby && !finale && !!(keys.KeyW || keys.ArrowUp && false), brk = !lobby && !finale && !!keys.KeyS, lift = !lobby && !finale && !!keys.Space, // the pilot's scene plays out untouched: you watch it
     rollIn = 0, pitchIn = 0;
-  if (st.phase === 'ready') { if (thr || lift || brk) { st.phase = 'drive'; coach.runs++; store.set('rl_runs', coach.runs); flash('Go', .6); document.getElementById('start').classList.add('off'); recStart(); } }
+  if (st.phase === 'ready') { if (thr || lift || brk) { st.phase = 'drive'; coach.runs++; track('run'); store.set('rl_runs', coach.runs); flash('Go', .6); document.getElementById('start').classList.add('off'); recStart(); } }
   if (st.phase !== 'ready' && st.phase !== 'done' && st.phase !== 'crashed' && !st.finished) { st.time += dt; st.maxV = Math.max(st.maxV || 0, st.mode === 'air' ? st.vel.length() : st.v); }
   let jets = [0, 0, 0, 0], side = [0, 0], boost = false;
   if (st.world === 'mars') { st.marsAge = (st.marsAge || 0) + dt; if (st.marsAge < 4.5 && (st.mode === 'air' || st.mode === 'rocket')) { // the thick upper air: drag pulls you down to ~80 m/s, then thins out
@@ -1669,7 +1670,7 @@ function shareText(rolls, flips) {
     : 'I got the Roadster through the launch but missed the line-up 😅 Can you clear it?';
   return `${head}\n🏁 ${st.score ? st.score.toLocaleString('en-US') + ' pts · ' : ''}${runStats(rolls, flips).join(' · ')}`;
 }
-function shareX(text) { // X's post link can't attach an image: phones share the dashboard picture through the share sheet (pick X),
+function shareX(text) { track('share', { to: 'x' }); // X's post link can't attach an image: phones share the dashboard picture through the share sheet (pick X),
   // desktops get it on the clipboard to paste into the post that opens
   const post = text + ' via @nathangu76', intent = () => window.open('https://x.com/intent/post?text=' + encodeURIComponent(post) + '&url=' + encodeURIComponent(SHARE_URL), '_blank', 'noopener');
   if (DASH.blob && TOUCH_UI && navigator.canShare) { const file = new File([DASH.blob], 'roadster-launch.png', { type: 'image/png' });
@@ -1678,7 +1679,7 @@ function shareX(text) { // X's post link can't attach an image: phones share the
     navigator.clipboard.write([new ClipboardItem({ 'image/png': DASH.blob })]).then(() => flash('Dashboard image copied · paste it into your post', 5, true), () => {}); }
   intent();
 }
-function shareInstagram(text) { // Instagram has no web share link: phones get the share sheet with the clip attached, desktops get the pieces
+function shareInstagram(text) { track('share', { to: 'ig' }); // Instagram has no web share link: phones get the share sheet with the clip attached, desktops get the pieces
   const caption = `${text}\nPlay free: ${SHARE_URL}`;
   try { navigator.clipboard.writeText(caption).catch(() => {}); } catch (e) {} // the share sheet drops the text for Instagram, so it's on the clipboard to paste
   const media = REC.blob ? new File([REC.blob], recName(), { type: /mp4/.test(REC.mime) ? 'video/mp4' : 'video/webm' }) : DASH.blob ? new File([DASH.blob], 'roadster-launch.png', { type: 'image/png' }) : null;
@@ -1691,7 +1692,8 @@ function shareInstagram(text) { // Instagram has no web share link: phones get t
 /* ============ garage: pick a car, paint it, spray your name on the doors. Online: everyone else's car in the same world ============ */
 const CARS = [{ key: 'ROADSTER', name: 'ROADSTER' }]; // one car, yours to paint
 const SWATCH = ['#d9dbde', '#1a1c20', '#c8102e', '#ff6a13', '#ffd23f', '#2bb673', '#1f6feb', '#7a3cff'];
-const GAR = Object.assign({ mode: 'solo', car: 0, color: '#d9dbde', name: '', showArt: true }, store.get('rl_garage', {})); GAR.car = 0;
+const GAR = Object.assign({ mode: 'online', car: 0, color: '#d9dbde', name: '', showArt: true }, store.get('rl_garage', {})); GAR.car = 0;
+if (!store.get('rl_modeV2', false)) { GAR.mode = 'online'; store.set('rl_modeV2', true); store.set('rl_garage', GAR); } // online became the default: switch everyone over once, then their choice sticks
 const ART = { url: store.get('rl_art', ''), img: null, tex: null, hash: store.get('rl_artHash', ''), sent: '' }; // your paint job (a WebP data URL) and its id on the server
 let HERO_CAR = null; // the loaded Roadster, kept as the template for every Roadster in the world
 function nameTexture(name, paint) { // graffiti tag: fat italic letters, dark outline, a gradient that contrasts the paint, a few drips
@@ -1793,7 +1795,7 @@ function netAdd(p) {
 }
 function netRemove(id) { const P = NET.peers.get(id); if (!P) return; scene.remove(P.g); P.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); NET.peers.delete(id); }
 function netMsg(m) {
-  if (m.t === 'welcome') { NET.id = m.id; for (const p of m.peers) netAdd(p); netStatus(); }
+  if (m.t === 'welcome') { track('online'); NET.id = m.id; for (const p of m.peers) netAdd(p); netStatus(); }
   else if (m.t === 'join') { netAdd(m); netStatus(); }
   else if (m.t === 'leave') { netRemove(m.id); netStatus(); }
   else if (m.t === 's') { const P = NET.peers.get(m.id); if (!P) return; P.buf.push({ t: performance.now(), p: m.p, q: m.q, w: m.w, f: m.f }); if (P.buf.length > 12) P.buf.shift(); }
@@ -1893,6 +1895,15 @@ function netTick(now) {
 /* ============ leaderboard: no accounts. Finish a run with points, type a name (or keep your garage name), one tap and you're on it ============ */
 const LB_URL = NET_URL.replace('wss://', 'https://').replace('/ws', '/lb');
 const DEVICE = (() => { let d = store.get('rl_device', ''); if (!/^[a-z0-9-]{8,40}$/.test(d)) { d = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36)).toLowerCase(); store.set('rl_device', d); } return d; })();
+// play stats and client errors: a beacon to our own server (random device id, phone or desktop; no names, no IPs). Off on local test pages
+const STAT_URL = NET_URL.replace('wss://', 'https://').replace('/ws', '/ev'), STAT_ON = !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && location.protocol === 'https:' && !/[?&]nostats\b/.test(location.search);
+const STAT_UA = ((navigator.userAgent.match(/iPhone OS [\d_]+|iPad|Android [\d.]+|Windows NT [\d.]+|Mac OS X [\d_]+|CrOS|Linux/) || [''])[0] + ' ' + ((navigator.userAgent.match(/(CriOS|FxiOS|EdgA|Edg|OPR|SamsungBrowser|Chrome|Firefox|Version)\/\d+/) || [''])[0])).trim();
+const statSeen = new Set(); let statErrN = 0;
+function track(k, x) { if (!STAT_ON) return; if (k === 'err') { const key = x.msg + x.at; if (statSeen.has(key) || ++statErrN > 8) return; statSeen.add(key); x = { msg: x.msg, at: (x.at + ' ' + STAT_UA).trim() }; }
+  const body = JSON.stringify({ d: DEVICE, k, m: matchMedia('(pointer:coarse)').matches ? 1 : 0, x });
+  try { if (!(navigator.sendBeacon && navigator.sendBeacon(STAT_URL, new Blob([body], { type: 'text/plain' })))) fetch(STAT_URL, { method: 'POST', body, keepalive: true }).catch(() => {}); } catch (_) {} }
+for (const e of window.__eq.splice(0)) track('err', e); window.__eq = { push: e => track('err', e) }; // early errors, then live
+track('open');
 const lbEl = document.getElementById('lb');
 function lbRender(d) {
   const ol = lbEl.querySelector('ol'), esc = t => String(t).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
@@ -1905,7 +1916,7 @@ async function lbOpen() {
 }
 async function lbSubmit(name, score) {
   const r = await fetch(LB_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device: DEVICE, name, score }) });
-  const d = await r.json(); if (!r.ok) throw new Error(d.error || 'failed'); return d;
+  const d = await r.json(); if (!r.ok) throw new Error(d.error || 'failed'); track('submit'); return d;
 }
 lbEl.querySelector('.back').onclick = () => { lbEl.hidden = true; };
 fetch(`${LB_URL}?device=${DEVICE}`).then(r => r.json()).then(d => { if (d && d.total >= 10) document.getElementById('gstat').textContent = `${d.total.toLocaleString('en-US')} racers on the board`; }).catch(() => {}); // real numbers only
@@ -2074,7 +2085,7 @@ function showResult() {
   if (legend) h = 'ALL MISSIONS <span>COMPLETE</span>';
   else if (st.phase === 'crashed') { h = '<span>CRASHED</span>'; tip = CRASH_TIP[CRASH_KIND(st.crashWhy)]; }
   else h = 'YOUR <span>RUN</span>';
-  resEl.classList.toggle('legend', legend); if (legend) { cheer(0, true); cheer(1, true); hitSound(6); }
+  resEl.classList.toggle('legend', legend); if (legend) { track('allm'); cheer(0, true); cheer(1, true); hitSound(6); }
   const canRec = !!REC.r && !st.summary; // the replay is only cut when the run ends
   resEl.innerHTML = `${legend ? '<i class="rays"></i>' : ''}${badge}<h2${legend ? ' class="legend"' : ''}>${h}</h2><div class="score-big"><span>0</span><small>PTS</small></div>${score > 0 ? '<div class="lbrow"><input maxlength="28" placeholder="YOUR NAME" autocomplete="off" spellcheck="false" enterkeyhint="send"><button type="button">Add to leaderboard</button></div>' : ''}${tip ? `<div class="tip">${tip}</div>` : ''}<div class="acts">${st.summary ? '<button class="keep" type="button">▶ Keep driving</button>' : ''}<button class="again" type="button">↺ Run it again</button><button class="share" data-share="x" type="button">Share on 𝕏</button><button class="share" data-share="ig" type="button">Instagram</button>${canRec ? '<button id="dl" data-rec="dl" type="button" disabled>Saving replay…</button>' : ''}</div><a class="by" href="https://x.com/nathangu76" target="_blank" rel="noopener">Made by @nathangu76</a>`;
   resEl.hidden = false; document.body.classList.add('resultup'); countUp(resEl.querySelector('.score-big'), score); if (score > 0) lbResultRow(score); const ag = resEl.querySelector('.again'); if (ag) ag.onclick = () => spawn(); const kp = resEl.querySelector('.keep'); if (kp) kp.onclick = closeSummary;
@@ -2705,7 +2716,7 @@ function arriveMars() { // into Mars' air without a cut: the car keeps its attit
   if (t.lengthSq() < .01) { const nose = V(0, 0, -1).applyQuaternion(st.q); t = nose.addScaledVector(up, -nose.dot(up)); } if (t.lengthSq() < 1e-4) t = V(1, 0, 0).addScaledVector(up, -up.x); t.normalize();
   const D = V(0, 0, 1), M = new THREE.Matrix4().makeBasis(D, Y, D.clone().cross(Y)).multiply(new THREE.Matrix4().makeBasis(t, up, t.clone().cross(up)).transpose()), qM = new THREE.Quaternion().setFromRotationMatrix(M); // local up -> up, the way you're heading -> down the runway
   const camOff = camPos.clone().sub(st.pos).applyQuaternion(qM), lookOff = camLook.clone().sub(st.pos).applyQuaternion(qM);
-  setWorld('mars'); clearSmoke(); st.marsAge = 0;
+  setWorld('mars'); clearSmoke(); st.marsAge = 0; track('mars');
   st.vel.applyQuaternion(qM); st.q.premultiply(qM); st.w.set(0, 0, 0); const vh = Math.hypot(st.vel.x, st.vel.z);
   st.pos.set(0, 1600, RWY.z0 + 330 - vh / .8); // the air takes most of the forward speed out over the first seconds: about vh / 0.8 metres of drift, so this ends up over the runway
   if (st.mode === 'rocket') Object.assign(st.rk, { mars: true, land: false }); st.yaw = yawOf(D); st.fuel = 100; st.js = st.js || newJumpStats();
@@ -2736,7 +2747,7 @@ function stepWarp(dt) {
     warpEl.className = ''; wflashEl.className = 'out'; setTimeout(() => { pop('WELCOME TO MARS', '0.38 g', 'cool'); }, 700); }
 }
 function marsLanded() {
-  MARS.done = true; addScore(5000); missionMark('mars');
+  track('land'); MARS.done = true; addScore(5000); missionMark('mars');
   const tv = st.touchVy || 0, grade = tv < 3 ? ['PERFECT TOUCHDOWN', 3000] : tv < 6 ? ['TOUCHDOWN', 1500] : ['HARD TOUCHDOWN', 400], onRwy = Math.abs(st.pos.x) < 15 && st.pos.z > MARS_Z - 60 && st.pos.z < MARS_Z + 640;
   addScore(grade[1] + (onRwy ? 2000 : 0)); marsWinEl.querySelector('i').innerHTML = `${grade[0]}  +${(5000 + grade[1] + (onRwy ? 2000 : 0)).toLocaleString('en-US')}${onRwy ? '<small>ON THE RUNWAY</small>' : ''}`; msgEl.style.opacity = 0; msgT = 0; popsEl.innerHTML = ''; // the title owns the screen
   marsWinEl.className = 'on'; st.shake = 2.6; shockRing.position.set(st.pos.x, .05, st.pos.z); shockRing.userData.t = 0; shockRing.visible = true;
@@ -2894,7 +2905,7 @@ const IOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform ==
 if (fsOK) { fsBtn.hidden = false; fsBtn.onclick = () => { fsToggle(); canvas.focus(); }; }
 else if (IOS && !APP) { fsBtn.hidden = false; fsBtn.onclick = () => { flash('Full screen: Share → Add to Home Screen', 4, true); canvas.focus(); }; } // iPhone Safari won't let a page go full screen; a home-screen launch is full screen
 for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => fsBtn.classList.toggle('on', fsOn()));
-document.getElementById('startBtn').onclick = () => { unlockAudio(); if (TOUCH && fsOK && !fsOn()) fsToggle(); setLobby(false); startShot(); canvas.focus(); }; // on a phone START also takes the whole screen // START: the original opening, ready to drive
+document.getElementById('startBtn').onclick = () => { track('start'); unlockAudio(); if (TOUCH && fsOK && !fsOn()) fsToggle(); setLobby(false); startShot(); canvas.focus(); }; // on a phone START also takes the whole screen // START: the original opening, ready to drive
 addEventListener('keydown', e => { if (document.body.classList.contains('lobby') && e.code === 'Enter' && !(e.target && e.target.tagName === 'INPUT')) document.getElementById('startBtn').click(); });
 setLobby(true);
 go();
