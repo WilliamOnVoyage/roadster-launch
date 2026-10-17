@@ -2025,7 +2025,7 @@ function addPart(k, p) { (st.parts ||= {})[k] = (st.parts[k] || 0) + p; }
 const SCORE_UI = { shown: 0, target: 0, raf: 0, next: 0, gen: 0 };
 function scoreReset() { SCORE_UI.gen++; SCORE_UI.shown = SCORE_UI.target = 0; cancelAnimationFrame(SCORE_UI.raf); for (const e of document.querySelectorAll('.fly')) e.remove(); scoreEl.textContent = '0 PTS'; }
 function scoreRoll() { cancelAnimationFrame(SCORE_UI.raf); const from = SCORE_UI.shown, to = SCORE_UI.target, t0 = performance.now();
-  const tick = now => { const u = Math.min(1, (now - t0) / 420); SCORE_UI.shown = Math.round(from + (to - from) * (1 - Math.pow(1 - u, 3))); scoreEl.textContent = SCORE_UI.shown.toLocaleString('en-US') + ' PTS'; if (u < 1) SCORE_UI.raf = requestAnimationFrame(tick); };
+  const tick = now => { const u = clamp01((now - t0) / 420); /* the frame's timestamp can be a hair before t0 */ SCORE_UI.shown = Math.round(from + (to - from) * (1 - Math.pow(1 - u, 3))); scoreEl.textContent = SCORE_UI.shown.toLocaleString('en-US') + ' PTS'; if (u < 1) SCORE_UI.raf = requestAnimationFrame(tick); };
   SCORE_UI.raf = requestAnimationFrame(tick); scoreEl.classList.remove('hit'); void scoreEl.offsetWidth; scoreEl.classList.add('hit'); }
 function scoreFly(p) {
   const gen = SCORE_UI.gen, now = performance.now(), wait = Math.max(0, SCORE_UI.next - now); SCORE_UI.next = now + wait + 200; // several at once go one after another
@@ -2054,7 +2054,7 @@ function bankJump(js, clean) { // landing: air time + tricks, combo and clean-la
 }
 function countUp(el, to) { // the total rolls up with a ticking sound, then lands with a punch
   if (!el) return; const span = el.querySelector('span'), t0 = performance.now(), dur = Math.min(1300, 450 + to / 6); let lastTick = 0;
-  const tick = now => { const u = Math.min(1, (now - t0) / dur), v = Math.round(to * (1 - Math.pow(1 - u, 3)));
+  const tick = now => { const u = clamp01((now - t0) / dur), v = Math.round(to * (1 - Math.pow(1 - u, 3)));
     span.textContent = v.toLocaleString('en-US');
     if (snd.ctx && snd.on && now - lastTick > 55 && u < 1) { lastTick = now; const c = snd.ctx, o = c.createOscillator(), g = c.createGain(); o.type = 'square'; o.frequency.value = 1400 + 900 * u; g.gain.setValueAtTime(.05, c.currentTime); g.gain.exponentialRampToValueAtTime(.0005, c.currentTime + .03); o.connect(g); g.connect(snd.master); o.start(); o.stop(c.currentTime + .035); }
     if (u < 1) requestAnimationFrame(tick); else { el.classList.add('done'); hitSound(5); } };
@@ -2320,8 +2320,9 @@ function updateCamera(dt) {
     look = C.clone().add(V(0, portrait ? 2.6 : .7, 0)).addScaledVector(right, portrait ? 0 : -2.1); // car to the right of the panel (or under it on a tall phone)
     k = 1 - Math.exp(-dt * (looking ? 10 : 3)); headSpot.intensity = 0; }
   else if (st.world === 'mars' && (st.mode === 'air' || (st.mode === 'rocket' && st.rk && st.rk.land)) && !MARS.done) { camera.up.copy(Y); // lander view: high behind at ~35 degrees, car mid-frame, the ground and runway below in sight
-    const alt = Math.max(0, st.pos.y), F = fwdOf(st.yaw || 0), back = F.clone().negate(), lowK = smooth(clamp01(1 - alt / 60)); // levels out near the ground
-    const want = back.multiplyScalar((12 + 2 * (1 - lowK)) * camZoom).add(V(0, (10 - 6 * lowK) * camZoom, 0)).applyAxisAngle(Y, orbitYaw);
+    const alt = Math.max(0, st.pos.y - marsFloor(st.pos.x, st.pos.z)), F = fwdOf(st.yaw || 0), back = F.clone().negate(), lowK = smooth(clamp01(1 - alt / 60)), hiK = smooth(clamp01((alt - 120) / 500)); // levels out near the ground
+    const bh = 12 + 2 * (1 - lowK), bv = 10 - 6 * lowK, el = Math.min(1.48, Math.max(.05, Math.atan2(bv, bh) + hiK * .35 + orbitPitch)), dd = Math.hypot(bh, bv) * camZoom; // high up it looks further down (the runway in view); drag up for nearly straight down
+    const want = back.multiplyScalar(Math.cos(el) * dd).add(V(0, Math.sin(el) * dd, 0)).applyAxisAngle(Y, orbitYaw);
     camRel.lerp(want, 1 - Math.exp(-dt * 4)); target = st.pos.clone().add(camRel); look = st.pos.clone().add(V(0, -1.2, 0)).addScaledVector(F, 2); // the car at the centre, the ground opening out below and ahead
     camPos.copy(target); camLook.lerp(look, 1 - Math.exp(-dt * 8)); }
   else if (st.mode === 'rocket' && st.rk) { camera.up.copy(Y); const nose = V(0, 0, -1).applyQuaternion(st.q);
