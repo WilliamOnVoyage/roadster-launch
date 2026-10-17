@@ -1656,6 +1656,7 @@ function updateHints() {
       const vy = st.vel.y, tLand = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * G * st.pos.y))) / G;
       if (st.pos.y > 5 && tLand > 1.25) { setHint(TOUCH_UI ? 'BONUS: TAP FLIP' : 'BONUS:  ↑ / ↓  FLIP', true); return; } }
   } else if (st.mode === 'ground' && st.dir > 0 && !st.cleared && !st.finished && st.pos.z > HOP_Z - 26 && st.pos.z < HOP_Z + 2 && st.v > 5 && (again('hop') || again('carry'))) t = TOUCH_UI ? 'TAP JETS' : 'JETS!  SPACE';
+  else if (st.mode === 'ground' && GAR.mode === 'online' && !document.body.classList.contains('lobby') && st.world !== 'mars' && st.dir < 0 && !st.rampDone && st.time < 8 && st.pos.z > RAMP.E.z + 4 && Math.abs(st.pos.x) > RAMP.half - .2) t = TOUCH_UI ? 'STEER ONTO THE RAMP' : 'STEER ONTO THE RAMP  ·  A / D'; // online start slots off the centre line miss the C-ramp
   setHint(t);
 }
 const retryReady = () => ((st.phase === 'crashed' && st.crashT > .8) || (!resEl.hidden && !st.summary)) && lbEl.hidden;
@@ -1816,10 +1817,10 @@ function carSpheres(pos, q, out) { const f = V(0, 0, -1).applyQuaternion(q), u =
 const SAFE_S = 3, ghostT = () => GAR.mode === 'online' && (st.safeT > 0 || document.body.classList.contains('lobby')) && st.phase !== 'crashed' ? 1 : 0; // spawn protection: the first 3 s after a spawn, then it lifts by itself (moving or not)
 function bumpOthers(dt) {
   if (document.body.classList.contains('lobby')) { st.safeT = SAFE_S; return; } // in the garage nothing touches your car; the 3 s countdown starts at START
-  st.safeT = Math.max(0, (st.safeT || 0) - dt); if (GAR.mode !== 'online' || !['ground', 'air', 'rocket'].includes(st.mode)) return; BUMP.cool -= dt; const safe = ghostT() > 0;
+  st.safeT = Math.max(0, (st.safeT || 0) - dt); if (GAR.mode !== 'online' || !['ground', 'air', 'rocket'].includes(st.mode)) return; if (st.finished && hero.state !== 'off') return; /* the pilot's scene: nobody shoves the car */ BUMP.cool -= dt; const safe = ghostT() > 0;
   const myW = st.world === 'mars' ? 1 : 0, mine = carSpheres(st.pos, st.q, []), R = 1.15;
   for (const O of [...NET.peers.values(), ...AI.list]) {
-    if (!O.g.visible || !O.model || O.world !== myW || O.g.position.distanceToSquared(st.pos) > 64) continue;
+    if (!O.g.visible || !O.model || O.ghost || O.world !== myW || O.g.position.distanceToSquared(st.pos) > 64) continue;
     const theirs = carSpheres(O.g.position, O.g.quaternion, []); let best = null, depth = 0;
     for (const a of mine) for (const b of theirs) { const d = a.distanceTo(b); if (d < 2 * R && 2 * R - d > depth) { depth = 2 * R - d; best = [a, b]; } }
     if (!best) continue;
@@ -1885,7 +1886,7 @@ function aiTick(now) {
 function netTick(now) {
   if (GAR.mode !== 'online') return;
   if (NET.open && NET.helloSent && now - NET.sendT > 100) { NET.sendT = now; const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
-    const f = (st.mode === 'rocket' || rearFlame[0].material.opacity > .3 ? 1 : 0) | (liftGlow[0].material.opacity > .3 ? 2 : 0) | (st.mode === 'rocket' ? 4 : 0) | (st.phase === 'crashed' ? 8 : 0);
+    const f = (st.mode === 'rocket' || rearFlame[0].material.opacity > .3 ? 1 : 0) | (liftGlow[0].material.opacity > .3 ? 2 : 0) | (st.mode === 'rocket' ? 4 : 0) | (st.phase === 'crashed' ? 8 : 0) | (st.summary || !lbEl.hidden || (st.finished && hero.state !== 'off') ? 16 : 0); // 16: ghost (paused or in the pilot's scene): others pass through
     try { NET.ws.send(JSON.stringify({ t: 's', p: [r2(st.pos.x), r2(st.pos.y), r2(st.pos.z)], q: [r3(st.q.x), r3(st.q.y), r3(st.q.z), r3(st.q.w)], w: st.world === 'mars' ? 1 : 0, f, sc: st.score || 0 })); } catch (e) {} }
   const rt = now - 130, myW = st.world === 'mars' ? 1 : 0;
   for (const P of NET.peers.values()) {
@@ -1895,7 +1896,7 @@ function netTick(now) {
     const u = b.t > a.t ? clamp01((rt - a.t) / (b.t - a.t)) : 1;
     P.g.position.set(a.p[0] + (b.p[0] - a.p[0]) * u, a.p[1] + (b.p[1] - a.p[1]) * u, a.p[2] + (b.p[2] - a.p[2]) * u);
     qa.set(...a.q).normalize(); qb.set(...b.q).normalize(); P.g.quaternion.copy(qa.slerp(qb, u));
-    P.world = b.w; const gap = B.length > 1 ? b.t - B[B.length - 2].t : 0; P.vel = B.length > 1 && gap > 30 && gap < 500 ? V(b.p[0] - B[B.length - 2].p[0], b.p[1] - B[B.length - 2].p[1], b.p[2] - B[B.length - 2].p[2]).divideScalar(gap / 1000).clampLength(0, 90) : V(0, 0, 0);
+    P.world = b.w; P.ghost = !!(b.f & 16); const gap = B.length > 1 ? b.t - B[B.length - 2].t : 0; P.vel = B.length > 1 && gap > 30 && gap < 500 ? V(b.p[0] - B[B.length - 2].p[0], b.p[1] - B[B.length - 2].p[1], b.p[2] - B[B.length - 2].p[2]).divideScalar(gap / 1000).clampLength(0, 90) : V(0, 0, 0);
     P.g.visible = b.w === myW && now - b.t < 5000;
   }
 }
