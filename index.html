@@ -1145,7 +1145,7 @@ const cueEl = document.getElementById('cue'), resEl = document.getElementById('r
 const WHEEL_CONTACT = [V(-.92, .02, 1.45), V(.92, .02, 1.45), V(-.92, .02, -1.42), V(.92, .02, -1.42)];
 function spawn() {
   Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, crashWhy: '', maxV: 0 });
-  if (st.world === 'mars') setWorld('earth'); MARS.done = false; st.rk = null; st.fuel = 100; st.marsAge = 0; entryEl.style.opacity = 0; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
+  if (st.world === 'mars') setWorld('earth'); marsGuardReset(); MARS.done = false; st.rk = null; st.fuel = 100; st.marsAge = 0; entryEl.style.opacity = 0; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
   msgEl.style.opacity = 0; msgT = 0; startShot(); setHint(''); st.score = 0; st.parts = {}; st.banked = 0; st.rampDone = false; st.mdone = {}; st.finishDone = false; st.summary = false; scoreReset(); popsEl.innerHTML = ''; for (const c of COILS) c.zapped = false; // a restart starts clean: no leftover banner, the standard chase view straight back behind the car (any orbit or zoom dropped)
   for (const pr of props) { if (!pr.home) pr.home = [pr.w.position.clone(), pr.w.rotation.clone()]; pr.hit = false; pr.body = null; pr.w.position.copy(pr.home[0]); pr.w.rotation.copy(pr.home[1]); pr.w.updateMatrixWorld(true); pr.box.setFromObject(pr.w); }
   heroReset(); clearSmoke(); setTimeout(missionsUI, 0); document.body.classList.remove('resultup');
@@ -1339,6 +1339,7 @@ function smash(list, vel = st.vel) { // whatever gets hit is thrown: momentum fr
   if (list.length) { st.shake = 2; cheer(1, false); }
 }
 function updateProps(dt) {
+  if (st.world === 'mars' && MARS.wrecks) for (const r of MARS.wrecks) { for (let k = 0; k < 4; k++) r.b.step(dt / 4); r.w.position.copy(r.b.origin()); r.w.quaternion.copy(r.b.q); } // knocked parked cars on Mars
   for (const pr of props) { if (!pr.body) continue; const b = pr.body;
     for (let k = 0; k < 4; k++) b.step(dt / 4, hit => { if (hit > 3 && rnd() < .3) for (let i = 0; i < 4; i++) puff(b.com.clone(), V((rnd() - .5) * 6, 1, (rnd() - .5) * 6), 1.4, 2.5, 0xb0b6be, .45, 3); });
     pr.w.position.copy(b.origin()); pr.w.quaternion.copy(b.q); pr.box.setFromObject(pr.w); }
@@ -1360,7 +1361,7 @@ function land() {
   if (upN < .866) return crash(upN < 0 ? 'landed on its roof' : upN < .5 ? 'landed on its side' : `touched down ${Math.round(Math.acos(upN) * 57.3)}° off level`);
   const fh = V(f.x, 0, f.z).normalize(), vh = V(st.vel.x, 0, st.vel.z), hs = vh.length();
   if (hs > 8 && Math.abs(fh.dot(vh) / hs) < .5) return crash('landed sideways'); // skidding in more than 60 degrees off the nose
-  if (vy > (st.world === 'mars' ? 9 : 13)) return crash(st.world === 'mars' ? `hit Mars at ${Math.round(vy * 3.6)} km/h` : `hit the ground at ${Math.round(vy * 3.6)} km/h`);
+  if (vy > (mars ? (hs > 12 && upN > .95 ? 16 : 9) : 13)) return crash(st.world === 'mars' ? `hit Mars at ${Math.round(vy * 3.6)} km/h` : `hit the ground at ${Math.round(vy * 3.6)} km/h`);
   st.touchVy = vy;
   st.yaw = yawOf(fh); st.dir = fh.z < 0 ? -1 : 1; st.v = vh.dot(fh); st.q.copy(yawQuat(st.yaw)); st.w.set(0, 0, 0); // touching down travelling backwards keeps rolling backwards
   if (gn) { const F = fwdOf(st.yaw), Fs = F.clone().addScaledVector(nrm, -F.dot(nrm)).normalize(); st.v = st.vel.dot(Fs); st.q.copy(basisQuat(Fs, nrm)); st.gvel = Fs.clone().multiplyScalar(st.v); st.groundT = 0; } // on the slope, carrying the speed along it
@@ -1483,9 +1484,9 @@ function step(dt) {
       if (ang > .02) { err.normalize(); const rate = Math.min(fast ? 4.5 : 2.2, ang * (fast ? 6 : 3)), resp = Math.min(1, dt * (fast ? 14 : 6)); st.w.x += (err.x * rate - st.w.x) * resp; st.w.z += (err.z * rate - st.w.z) * resp; }
     }
     const wl = st.w.length(); if (wl > 1e-5) st.q.multiply(tmpQ.setFromAxisAngle(st.w.clone().divideScalar(wl), wl * dt)).normalize();
-    // landing computer: when the car is upright and falling it fires the down-jets just in time to set it down softly
-    { const upy = V(0, 1, 0).applyQuaternion(st.q).y, h = st.pos.y, vy = st.vel.y, aN = LIFT_A * upy - G;
-      if (st.world !== 'mars' && upy > .85 && vy < -1 && aN > 0 && vy * vy > 2 * aN * Math.max(.05, h - .6) * .9) { if (!lift) { acc.addScaledVector(up, LIFT_A); jets = [1, 1, 1, 1]; st.vel.addScaledVector(up, LIFT_A * dt); } }
+    // landing computer: when the car is upright and falling it fires the down-jets just in time to set it down softly (on Mars once you've made your first landing there: then it helps over the dunes)
+    { const upy = V(0, 1, 0).applyQuaternion(st.q).y, h = st.world === 'mars' ? st.pos.y - marsFloor(st.pos.x, st.pos.z) : st.pos.y, vy = st.vel.y, aN = LIFT_A * upy - G;
+      if ((st.world !== 'mars' || MARS.done) && upy > .85 && vy < -1 && aN > 0 && vy * vy > 2 * aN * Math.max(.05, h - .6) * .9) { if (!lift) { acc.addScaledVector(up, LIFT_A); jets = [1, 1, 1, 1]; st.vel.addScaledVector(up, LIFT_A * dt); } }
       if (st.popT > 0) { st.popT -= dt; st.vel.addScaledVector(up, (lift ? 1.2 : 2.2) * LIFT_A * dt); jets = [1, 1, 1, 1]; } }
     js.t += dt; js.maxH = Math.max(js.maxH, st.pos.y); js.roll += Math.abs(st.w.z) * dt; js.pitch += Math.abs(st.w.x) * dt; trickCheck(js);
     st.gload = acc.clone().add(V(0, G, 0)).length() / G;
@@ -1493,7 +1494,8 @@ function step(dt) {
     const hit = hitsObstacle(); if (hit.length) { smash(hit); st.vel.multiplyScalar(.6); crash(st.vel.y < -2 ? 'came down on the line-up' : 'flew into the line-up'); }
     else if (rampHit) crash('hit the ramp');
     else if (st.world === 'mars') { const gH = marsFloor(st.pos.x, st.pos.z), what = st.pos.y < gH + 4 ? marsBlocked(st.pos, fwdOf(st.yaw || 0)) : '';
-      if (what) { st.vel.multiplyScalar(.5); crash('flew into ' + what); } else if (st.pos.y <= gH) land(); } // any contact with the ground is a landing: land() judges it against the slope
+      if (what && what.car) { marsKnock(what, st.vel); if (st.vel.length() > 20) { st.vel.multiplyScalar(.5); crash('flew into a parked car'); } else st.vel.multiplyScalar(.6); }
+      else if (what) { st.vel.multiplyScalar(.5); crash('flew into ' + (typeof what === 'object' ? 'the honour guard' : what)); } else if (st.pos.y <= gH) land(); } // any contact with the ground is a landing: land() judges it against the slope
     else if (st.pos.y <= 0 && st.vel.y <= 0) land();
     else if (st.pos.y < 0) st.pos.y = 0;
   } else if (st.mode === 'crashed') {
@@ -2494,13 +2496,17 @@ const mNoise = (x, z) => { const ix = Math.floor(x), iz = Math.floor(z), fx = x 
   const a = mHash(ix, iz), b = mHash(ix + 1, iz), c = mHash(ix, iz + 1), d = mHash(ix + 1, iz + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; };
 const mFbm = (x, z, o = 5) => { let s = 0, a = .5, f = 1; for (let i = 0; i < o; i++) { s += a * mNoise(x * f, z * f); f *= 2.03; a *= .5; } return s; };
 const mSS = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-function marsH(x, z) { // flat landing strip along x = 0, rolling floor, then canyon walls and mountains
-  const ax = Math.abs(x), floor = mSS(16, 110, ax) * (mFbm(x * .013, z * .013, 4) - .45) * 5;
+function marsH(x, z) { // a flat landing strip along the runway; everywhere else rolling ground, dune seas (long gentle windward faces, short steep lee faces:
+  // take one fast and you fly), craters, and canyon walls out to the sides
+  const ax = Math.abs(x), rw = mSS(RWY.z0 - 170, RWY.z0 - 70, z) * (1 - mSS(RWY.z0 + RWY.len + 70, RWY.z0 + RWY.len + 170, z)), flat = rw * (1 - mSS(16, 60, ax));
+  const re = RWY.z0 + RWY.len, rolling = (mFbm(x * .013, z * .013, 4) - .45) * 6, sea = Math.max(mSS(.3, .5, mFbm(x * .0035 + 31, z * .0035 - 7, 3)), mSS(re + 90, re + 260, z) * (1 - mSS(re + 1300, re + 1500, z))); // dune seas and open plains, patch by patch; a sea of them straight off the runway's end
+  let dunes = 0; { const u = (z + (mFbm(x * .005 + 9, z * .005, 3) - .5) * 160 + x * .25) / 95, sw = u - Math.floor(u); // crest lines across the wind, wandering
+    dunes = (.15 + .85 * sea) * (sw < .78 ? Math.pow(sw / .78, 1.7) : Math.pow((1 - sw) / .22, 1.3)) * (4 + mFbm(x * .011 - 5, z * .011, 2) * 14); } // ripples on the plains, real dunes in the seas
   const wall = mSS(140, 560, ax) * (55 + mFbm(x * .0022 + 7, z * .0022, 5) * 170 + (1 - Math.abs(2 * mNoise(x * .009, z * .009) - 1)) * 38);
   const crater = (() => { const cx = Math.round(x / 90), cz = Math.round(z / 90); if (Math.abs(cx) < 1 || mHash(cx, cz, 9) > .22) return 0; // a sparse crater field off the strip
     const r = 12 + mHash(cx, cz, 3) * 26, dx = x - (cx * 90 + (mHash(cx, cz, 4) - .5) * 40), dz = z - (cz * 90 + (mHash(cx, cz, 5) - .5) * 40), d = Math.hypot(dx, dz) / r;
     return d > 1.6 ? 0 : d < 1 ? -r * .22 * (1 - d * d) : r * .09 * Math.max(0, 1 - (d - 1) / .6) * Math.sin(Math.PI * Math.min(1, (d - 1) / .6 + .5)); })();
-  return floor + wall + crater * mSS(30, 60, ax);
+  return (1 - flat) * (rolling * (1 - .5 * sea) + dunes + crater) + wall;
 }
 /* ============ Mars ground physics: the car drives on the surface that's drawn (the 15 m terrain mesh), tilts with it, gravity pulls it
    down the slopes, it flies off crests it takes too fast, and steep canyon walls, big rocks and the honour guard are solid ============ */
@@ -2514,23 +2520,39 @@ function marsSurf(pos, F) { // the car on its four tyre patches: ride height and
   const R = F.clone().cross(Y), f = pos.clone().addScaledVector(F, 1.5), b = pos.clone().addScaledVector(F, -1.5), r = pos.clone().addScaledVector(R, .85), l = pos.clone().addScaledVector(R, -.85);
   const hF = marsFloor(f.x, f.z), hB = marsFloor(b.x, b.z), hR = marsFloor(r.x, r.z), hL = marsFloor(l.x, l.z);
   const n = R.clone().multiplyScalar(1.7).setY(hR - hL).cross(F.clone().multiplyScalar(3).setY(hF - hB)).normalize();
-  return { h: Math.max((hF + hB + hR + hL) / 4, marsFloor(pos.x, pos.z) - .08), n };
+  return { h: Math.max((hF + hB + hR + hL) / 4, marsFloor(pos.x, pos.z) - .08, Math.max(hF, hB, hR, hL) - .18), n }; // never sunk more than a tyre into a crest
 }
 function marsSolid(x, z, y, r) { // what's solid at this spot at height y (within r): '' or what it is
-  if (MARS.guard && Math.abs(Math.abs(x) - RWY.half - 8) < 10) for (const g of MARS.guard) { const dx = x - g.x, dz = z - g.z; if (dx * dx + dz * dz < (g.r + r) ** 2 && y < g.top) return g.car ? 'a parked car' : 'the honour guard'; }
+  if (MARS.guard && Math.abs(Math.abs(x) - RWY.half - 8) < 10) for (const g of MARS.guard) { if (g.knocked) continue; const dx = x - g.x, dz = z - g.z; if (dx * dx + dz * dz < (g.r + r) ** 2 && y < g.top) return g; } // a pilot or a parked car: the entry itself
   const ci = Math.round(x / 24), cj = Math.round(z / 24); // the rocks, from the same per-cell hashes that place them
   for (let cx = ci - 1; cx <= ci + 1; cx++) for (let cz2 = cj - 1; cz2 <= cj + 1; cz2++) {
-    if (Math.abs(cx) > 12 || mHash(cx, cz2, 17) > (Math.abs(cx) < 3 ? .5 : .35)) continue;
+    if (Math.abs(cx - (MARS.rc || 0)) > 12 || mHash(cx, cz2, 17) > (Math.abs(cx) < 3 ? .5 : .35)) continue; // only the rocks that are drawn
     const rx = cx * 24 + (mHash(cx, cz2, 1) - .5) * 24, rz = cz2 * 24 + (mHash(cx, cz2, 2) - .5) * 24; if (Math.abs(rx) < 3.5) continue;
     const big = Math.abs(rx) > 14 && mHash(cx, cz2, 6) < .18, sz = big ? 1.2 + mHash(cx, cz2, 7) * 2.6 : .15 + Math.pow(mHash(cx, cz2, 8), 2.5) * .9; if (sz < .55) continue; // pebbles: you drive over them
     const rr = sz * (.8 + Math.max(mHash(cx, cz2, 13), mHash(cx, cz2, 14)) * .6) * .8, dx = x - rx, dz = z - rz;
     if (dx * dx + dz * dz < (rr + r) ** 2 && y < marsH(rx, rz) + sz * .45) return 'a rock'; }
   return '';
 }
+const ZERO_M = new THREE.Matrix4().makeScale(0, 0, 0);
+function marsKnock(g, vel) { // a parked car hit: swap its instance for a loose copy and send it tumbling
+  if (g.knocked) return; g.knocked = true; g.im.setMatrixAt(g.j, ZERO_M); g.im.instanceMatrix.needsUpdate = true;
+  const w = new THREE.Group(); w.position.copy(g.P); w.quaternion.copy(g.Q); w.scale.setScalar(g.sc); const mat = [].concat(g.t.mat)[0].clone(); if (g.col && mat.color) mat.color.copy(g.col);
+  const m = new THREE.Mesh(g.t.geo, mat); m.matrixAutoUpdate = false; m.matrix.copy(g.t.rel); m.castShadow = true; w.add(m); MARS.group.add(w); w.updateMatrixWorld(true);
+  const sz = new THREE.Box3().setFromObject(w).getSize(V(0, 0, 0)), b = new Body(sz.x / 2, sz.y / 2, sz.z / 2, sz.x * sz.z * .25); b.rest = .15; b.mu = .6;
+  b.setFrom(w.position, w.quaternion, vel.clone().multiplyScalar(.6 / Math.max(1, b.m * .4)).add(V((rnd() - .5) * 3, 3 + rnd() * 3 + vel.length() * .05, (rnd() - .5) * 3)), V((rnd() - .5) * 3, (rnd() - .5) * 2, (rnd() - .5) * 3));
+  (MARS.wrecks ||= []).push({ w, b }); st.shake = Math.max(st.shake, 1.6); hitSound(3);
+  for (let i = 0; i < 26; i++) puff(g.P.clone().add(V((rnd() - .5) * 4, .6 + rnd(), (rnd() - .5) * 4)), V((rnd() - .5) * 10, 1.5 + rnd() * 3, (rnd() - .5) * 10), 1.4, 3.5, 0xb07a55, .5, 3); // Mars dust
+}
+function marsGuardReset() { // a new run: every parked car back in its spot
+  for (const g of MARS.guard || []) if (g.knocked) { g.knocked = false; g.im.setMatrixAt(g.j, new THREE.Matrix4().compose(g.P, g.Q, V(g.sc, g.sc, g.sc)).multiply(g.t.rel)); g.im.instanceMatrix.needsUpdate = true; }
+  for (const r of MARS.wrecks || []) { MARS.group.remove(r.w); r.w.traverse(o => { if (o.material) o.material.dispose(); }); } MARS.wrecks = [];
+}
 function marsBlocked(pos, F) { for (const k of [1.4, -1.4]) { const p = pos.clone().addScaledVector(F, k), w = marsSolid(p.x, p.z, pos.y + .4, .95); if (w) return w; } return ''; }
 function marsGround(prev, F, dt) { // one ground step on Mars, after the flat move: the surface, slopes, walls, crests
-  let S = marsSurf(st.pos, F); const what = marsBlocked(st.pos, F);
-  if (what || S.n.y < .72) { // a rock, a parked car, a pilot, or ground steeper than ~44 degrees: a wall
+  let S = marsSurf(st.pos, F); let what = marsBlocked(st.pos, F);
+  if (what && what.car) { marsKnock(what, F.clone().multiplyScalar(st.v)); if (Math.abs(st.v) > 20) { st.pos.y = S.h; st.vel.copy(F).multiplyScalar(st.v); return crash('ploughed into a parked car'); } st.v *= .5; what = ''; } // slow: you shove it out of the way
+  if (what || S.n.y < .72) { // a rock, a pilot, or ground steeper than ~44 degrees: a wall
+    if (typeof what === 'object') what = 'the honour guard';
     const sp = Math.abs(st.v); if (sp > 15) { st.pos.y = S.h; st.vel.copy(F).multiplyScalar(st.v); return crash(what ? 'hit ' + what : 'hit a canyon wall'); }
     st.pos.copy(prev); st.v *= -.2; st.shake = Math.max(st.shake, .3 + sp * .03); S = marsSurf(st.pos, F); }
   const Fs = F.clone().addScaledVector(S.n, -F.dot(S.n)).normalize(), gv = st.gvel || V(0, 0, 0);
@@ -2603,8 +2625,9 @@ function buildRunway() {
     for (const [x, step, jitter] of rows) for (let z = 8; z < RWY.len - 8; z += step) { const i = pick(x, z); if (i < 0) continue; per[i].push([x + (mHash(x, z, 21) - .5) * jitter, z]); }
     list.forEach((t, i) => { if (!per[i].length) return; const im = new THREE.InstancedMesh(t.geo, t.mat, per[i].length), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = V(0, 0, 0), Sc = V(1, 1, 1);
       per[i].forEach(([x, z], j) => { const face = x < 0 ? Math.PI / 2 : -Math.PI / 2, yawJ = (mHash(x, z, 22) - .5) * (t.car ? 1.6 : .7), sc = t.car ? 1 : .94 + mHash(x, z, 23) * .16;
-        P.set(x, marsH(x, RWY.z0 + z), RWY.z0 + z); (MARS.guard ||= []).push({ x, z: RWY.z0 + z, r: t.car ? 2.1 : .4, top: P.y + (t.car ? 1.5 : 1.9), car: !!t.car }); Q.setFromAxisAngle(Y, face + yawJ + (t.car ? (x < 0 ? -.8 : .8) : 0)); Sc.setScalar(sc); M.compose(P, Q, Sc).multiply(t.rel); im.setMatrixAt(j, M);
-        if (t.car) im.setColorAt(j, new THREE.Color([0xffffff, 0x3a3d42, 0xd8dadd, 0xc23a30, 0x9aa4b0][Math.floor(mHash(x, z, 24) * 5)])); });
+        P.set(x, marsH(x, RWY.z0 + z), RWY.z0 + z); Q.setFromAxisAngle(Y, face + yawJ + (t.car ? (x < 0 ? -.8 : .8) : 0)); Sc.setScalar(sc); M.compose(P, Q, Sc).multiply(t.rel); im.setMatrixAt(j, M);
+        const col = t.car ? new THREE.Color([0xffffff, 0x3a3d42, 0xd8dadd, 0xc23a30, 0x9aa4b0][Math.floor(mHash(x, z, 24) * 5)]) : null; if (col) im.setColorAt(j, col);
+        (MARS.guard ||= []).push({ x, z: RWY.z0 + z, r: t.car ? 2.1 : .4, top: P.y + (t.car ? 1.5 : 1.9), car: !!t.car, im, j, t, P: P.clone(), Q: Q.clone(), sc, col }); });
       im.castShadow = true; im.receiveShadow = true; G0.add(im); }); };
   if (pilots.length) place(pilots, (x, z) => mHash(x, z, 25) < .82 ? (mHash(x, z, 26) < .6 ? 0 : pilots.length - 1) : -1, [[-(RWY.half + 4), 5, .6], [RWY.half + 4, 5, .6]]);
   cars.forEach(t => t.car = true); if (cars.length) place(cars, (x, z) => mHash(x, z, 27) < .9 ? Math.floor(mHash(x, z, 28) * cars.length) : -1, [[-(RWY.half + 13), 9, 2], [RWY.half + 13, 9, 2]]);
@@ -2617,17 +2640,22 @@ function buildRunway() {
   const em = SKY.planetMat ? SKY.planetMat.clone() : null; if (em) { em.uniforms = { map: { value: et }, sunDir: { value: MARS_SUN.clone() } };
     MARS.earth = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), em); MARS.earth.userData.dir = V(-.45, .33, .83).normalize(); MARS.group.add(MARS.earth); }
 }
-function marsRecenter(cz) {
-  MARS.cz = cz; const g = MARS.terrain.geometry, P = g.attributes.position, C = g.attributes.color, { rust, dark, dust, basalt } = MARS.cols, c = new THREE.Color();
-  MARS.terrain.position.set(0, 0, cz);
-  for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i) + cz; P.setY(i, marsH(x, z)); }
+function marsTerrainJob() { // the next tile's heights, a slice per frame (a whole tile at once is a visible hitch at speed), then swap it in
+  const J = MARS.job; if (!J) return; const P = MARS.terrain.geometry.attributes.position, end = Math.min(P.count, J.i + 3000);
+  for (; J.i < end; J.i++) J.h[J.i] = marsH(P.getX(J.i) + J.cx, P.getZ(J.i) + J.cz);
+  if (J.i >= P.count) { MARS.job = null; marsRecenter(J.cx, J.cz, J.h); }
+}
+function marsRecenter(cx, cz, H) {
+  MARS.cx = cx; MARS.cz = cz; const g = MARS.terrain.geometry, P = g.attributes.position, C = g.attributes.color, { rust, dark, dust, basalt } = MARS.cols, c = new THREE.Color();
+  MARS.terrain.position.set(cx, 0, cz);
+  for (let i = 0; i < P.count; i++) P.setY(i, H ? H[i] : marsH(P.getX(i) + cx, P.getZ(i) + cz));
   g.computeVertexNormals(); const N = g.attributes.normal;
-  for (let i = 0; i < P.count; i++) { const x = P.getX(i), z = P.getZ(i) + cz, y = P.getY(i), slope = 1 - N.getY(i), n = mFbm(x * .02 + 40, z * .02, 3);
+  for (let i = 0; i < P.count; i++) { const x = P.getX(i) + cx, z = P.getZ(i) + cz, y = P.getY(i), slope = 1 - N.getY(i), n = mFbm(x * .02 + 40, z * .02, 3);
     c.copy(rust).lerp(dust, Math.max(0, n - .35) * 1.6).lerp(dark, mSS(.08, .35, slope) * .8).lerp(basalt, mSS(.3, .6, slope) * .7).lerp(dark, mSS(20, 160, y) * .35); C.setXYZ(i, c.r, c.g, c.b); }
   P.needsUpdate = C.needsUpdate = true; g.computeBoundingSphere();
   // rocks in 24 m cells from 1 km behind to 1 km ahead; mostly small, a few big ones off the strip
-  const o = new THREE.Object3D(); let n = 0; const z0 = Math.floor((cz - 1000) / 24), z1 = Math.floor((cz + 1000) / 24);
-  for (let cz2 = z0; cz2 <= z1 && n < 900; cz2++) for (let cx = -12; cx <= 12 && n < 900; cx++) {
+  const o = new THREE.Object3D(); let n = 0; const z0 = Math.floor((cz - 1000) / 24), z1 = Math.floor((cz + 1000) / 24), rc = Math.round(cx / 24); MARS.rc = rc;
+  for (let cz2 = z0; cz2 <= z1 && n < 900; cz2++) for (let cx = rc - 12; cx <= rc + 12 && n < 900; cx++) {
     const hsh = mHash(cx, cz2, 17); if (hsh > (Math.abs(cx) < 3 ? .5 : .35)) continue;
     const x = cx * 24 + (mHash(cx, cz2, 1) - .5) * 24, z = cz2 * 24 + (mHash(cx, cz2, 2) - .5) * 24; if (Math.abs(x) < 3.5) continue;
     const big = Math.abs(x) > 14 && mHash(cx, cz2, 6) < .18, sz = big ? 1.2 + mHash(cx, cz2, 7) * 2.6 : .15 + Math.pow(mHash(cx, cz2, 8), 2.5) * .9;
@@ -2638,7 +2666,7 @@ function marsRecenter(cz) {
 const WORLD_EARTH = { bg: scene.background.clone(), fog: scene.fog.color.clone(), fogD: scene.fog.density, hemiSky: hemi.color.clone(), hemiGround: hemi.groundColor.clone(), hemiI: hemi.intensity };
 function setWorld(w) {
   if ((st.world || 'earth') === w) return; st.world = w; const mars = w === 'mars';
-  if (mars) { buildMars(); marsRecenter(Math.round(MARS_Z / 300) * 300); }
+  if (mars) { buildMars(); MARS.job = null; marsRecenter(0, Math.round(MARS_Z / 300) * 300); }
   MARS.group.visible = mars; G = mars ? 3.71 : 9.81;
   scene.background.copy(mars ? new THREE.Color(.78, .52, .33) : WORLD_EARTH.bg); scene.fog.color.copy(mars ? new THREE.Color(.78, .54, .35) : WORLD_EARTH.fog); scene.fog.density = mars ? .00068 : WORLD_EARTH.fogD;
   hemi.color.copy(mars ? new THREE.Color(0xd2a07a) : WORLD_EARTH.hemiSky); hemi.groundColor.copy(mars ? new THREE.Color(0x4a2416) : WORLD_EARTH.hemiGround); hemi.intensity = mars ? 1.0 : WORLD_EARTH.hemiI;
@@ -2650,7 +2678,8 @@ function setWorld(w) {
 }
 function updateMars() {
   if (st.world !== 'mars') return;
-  if (Math.abs(st.pos.z - MARS.cz) > 300) marsRecenter(Math.round(st.pos.z / 300) * 300);
+  if (!MARS.job && (Math.abs(st.pos.z - MARS.cz) > 300 || Math.abs(st.pos.x - MARS.cx) > 300)) MARS.job = { cx: Math.round(st.pos.x / 300) * 300, cz: Math.round(st.pos.z / 300) * 300, i: 0, h: new Float32Array(MARS.terrain.geometry.attributes.position.count) };
+  marsTerrainJob();
   MARS.sky.position.copy(camera.position); MARS.skyMat.uniforms.uAlt.value = camera.position.y; const hz = MARS.skyMat.uniforms.uHaze.value; scene.fog.density = .00068 * (1 - .65 * mSS(80, 650, camera.position.y)) + hz * hz * .007; scene.fog.color.setRGB(.78, .54, .35).lerp(new THREE.Color(.92, .56, .33), hz); // thin air: darker sky, less haze from high up; thick glowing haze just after entry
   scene.background.setRGB(.78, .52, .33).lerp(new THREE.Color(.05, .035, .04), mSS(120, 750, camera.position.y)); MARS.earthDot.visible = !MARS.earth; MARS.earthDot.position.copy(camera.position).addScaledVector(MARS.earthDot.userData.dir, 1200);
   if (MARS.earth) { MARS.earth.position.copy(camera.position).addScaledVector(MARS.earth.userData.dir, 1200); MARS.earth.scale.setScalar(1200 * Math.sin(3.2 * Math.PI / 180)); }
