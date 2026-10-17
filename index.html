@@ -1123,11 +1123,11 @@ canvas.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, 
   if (e.pointerType === 'touch') { const t = performance.now(); if (ptrs.size === 1 && t - tap0[0] < 320 && Math.hypot(e.clientX - tap0[1], e.clientY - tap0[2]) < 40) viewReset(); tap0 = [t, e.clientX, e.clientY]; } // phones don't send dblclick: double-tap resets the view
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
 canvas.addEventListener('pointermove', e => { if (!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]);
-  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0) camZoom = Math.max(.45, Math.min(3.5, camZoom * pinch0 / d)); pinch0 = d; return; }
-  if (!drag) return; orbitYaw -= (e.clientX - drag[0]) * .006; orbitPitch = Math.max(-.32, Math.min(1.25, orbitPitch + (e.clientY - drag[1]) * .004)); drag = [e.clientX, e.clientY]; });
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (pinch0) camZoom = Math.max(.45, Math.min(3.5, camZoom * pinch0 / d)); pinch0 = d; lastLook = performance.now(); return; }
+  lastLook = performance.now(); if (!drag) return; orbitYaw -= (e.clientX - drag[0]) * .006; orbitPitch = Math.max(-.32, Math.min(1.25, orbitPitch + (e.clientY - drag[1]) * .004)); drag = [e.clientX, e.clientY]; });
 const endPtr = e => { ptrs.delete(e.pointerId); pinch0 = 0; drag = ptrs.size ? [...ptrs.values()][0] : null; };
 canvas.addEventListener('pointerup', endPtr); canvas.addEventListener('pointercancel', endPtr);
-canvas.addEventListener('wheel', e => { camZoom = Math.max(.45, Math.min(3.5, camZoom * Math.exp(e.deltaY * .0012))); e.preventDefault(); }, { passive: false });
+canvas.addEventListener('wheel', e => { lastLook = performance.now(); camZoom = Math.max(.45, Math.min(3.5, camZoom * Math.exp(e.deltaY * .0012))); e.preventDefault(); }, { passive: false });
 canvas.addEventListener('dblclick', viewReset);
 const msgEl = document.getElementById('msg'); let msgT = 0;
 function flash(t, d = 1.4, keepCase = false) { msgEl.textContent = t; msgEl.style.textTransform = keepCase ? 'none' : ''; msgEl.style.opacity = 1; msgT = d; }
@@ -1802,8 +1802,9 @@ const qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
    For 3 s after a spawn you're protected: cars still push apart, but nothing can shove or crash you. Nothing turns see-through ============ */
 const BUMP = { cool: 0 }, bA = V(0, 0, 0), bB = V(0, 0, 0), bN = V(0, 0, 0);
 function carSpheres(pos, q, out) { const f = V(0, 0, -1).applyQuaternion(q), u = V(0, 1, 0).applyQuaternion(q), c = pos.clone().addScaledVector(u, .6); out[0] = c.clone().addScaledVector(f, 1.25); out[1] = c.clone().addScaledVector(f, -1.25); return out; }
-const SAFE_S = 3, ghostT = () => GAR.mode === 'online' && st.safeT > 0 && st.phase !== 'crashed' ? 1 : 0; // spawn protection: the first 3 s after a spawn, then it lifts by itself (moving or not)
+const SAFE_S = 3, ghostT = () => GAR.mode === 'online' && (st.safeT > 0 || document.body.classList.contains('lobby')) && st.phase !== 'crashed' ? 1 : 0; // spawn protection: the first 3 s after a spawn, then it lifts by itself (moving or not)
 function bumpOthers(dt) {
+  if (document.body.classList.contains('lobby')) { st.safeT = SAFE_S; return; } // in the garage nothing touches your car; the 3 s countdown starts at START
   st.safeT = Math.max(0, (st.safeT || 0) - dt); if (GAR.mode !== 'online' || !['ground', 'air', 'rocket'].includes(st.mode)) return; BUMP.cool -= dt; const safe = ghostT() > 0;
   const myW = st.world === 'mars' ? 1 : 0, mine = carSpheres(st.pos, st.q, []), R = 1.15;
   for (const O of [...NET.peers.values(), ...AI.list]) {
@@ -2292,7 +2293,7 @@ function updateFloods(dt) {
 }
 /* ============ camera ============ */
 const camPos = V(0, 3, 122), camLook = V(0, 1, 100);
-const camUp = V(0, 1, 0), camBack = V(0, 0, 1), camRel = V(0, 3, 9), IDLE_YAW = .3; let camSnap = false, camIdle = IDLE_YAW, camIdle0 = 0; // on the line the camera sits a little off the right rear quarter
+let lobbyT = 0, lastLook = -1e9; const camUp = V(0, 1, 0), camBack = V(0, 0, 1), camRel = V(0, 3, 9), IDLE_YAW = .3; let camSnap = false, camIdle = IDLE_YAW, camIdle0 = 0; // on the line the camera sits a little off the right rear quarter
 function updateCamera(dt) {
   if (window.__freezeCam) return;
   if (camSnap) { camBack.set(0, 0, 1); camUp.copy(Y); } // after R the car faces the other way: a lerp between opposite directions never turns round
@@ -2311,12 +2312,13 @@ function updateCamera(dt) {
     if (hero.state === 'land') { const u = smooth(clamp01(hero.t / 2.8)); // slow move round the car
       target.lerp(C.clone().addScaledVector(HL, hero.side * 8.2 * camZoom).addScaledVector(HF, 3.4).setY(1.25 + orbitPitch * 3), u); look.lerp(C.clone().addScaledVector(HF, 3).setY(1.25), u); } // swing out to the side: the whole car leads the frame, he kneels off its nose
     k = 1 - Math.exp(-dt * 1.8); }
-  else if (document.body.classList.contains('lobby')) { camera.up.copy(Y); // showroom: a slow orbit round the car, framed clear of the garage panel
-    const a = Math.PI * .5 + Math.sin(performance.now() / 6000) * 1.05, r = 7.2, C = st.pos, portrait = innerHeight > innerWidth * 1.1; // swings between the two painted flanks, past the tail
-    target = V(C.x + Math.sin(a) * r, 1.7, C.z + Math.cos(a) * r);
+  else if (document.body.classList.contains('lobby')) { camera.up.copy(Y); // showroom: a slow orbit round the car, framed clear of the garage panel; drag to look round it yourself
+    const looking = performance.now() - lastLook < 3500; if (!looking) lobbyT += dt; // the sway waits while you're turning it
+    const a = Math.PI * .5 + Math.sin(lobbyT / 6) * 1.05 + orbitYaw, el = orbitPitch * .9, r = 7.2 * camZoom, C = st.pos, portrait = innerHeight > innerWidth * 1.1; // swings between the two painted flanks, past the tail
+    target = V(C.x + Math.sin(a) * r * Math.cos(el), Math.max(.35, 1.7 + Math.sin(el) * r), C.z + Math.cos(a) * r * Math.cos(el));
     const toCar = C.clone().sub(target).setY(0).normalize(), right = V(-toCar.z, 0, toCar.x);
     look = C.clone().add(V(0, portrait ? 2.6 : .7, 0)).addScaledVector(right, portrait ? 0 : -2.1); // car to the right of the panel (or under it on a tall phone)
-    k = 1 - Math.exp(-dt * 3); headSpot.intensity = 0; }
+    k = 1 - Math.exp(-dt * (looking ? 10 : 3)); headSpot.intensity = 0; }
   else if (st.world === 'mars' && (st.mode === 'air' || (st.mode === 'rocket' && st.rk && st.rk.land)) && !MARS.done) { camera.up.copy(Y); // lander view: high behind at ~35 degrees, car mid-frame, the ground and runway below in sight
     const alt = Math.max(0, st.pos.y), F = fwdOf(st.yaw || 0), back = F.clone().negate(), lowK = smooth(clamp01(1 - alt / 60)); // levels out near the ground
     const want = back.multiplyScalar((12 + 2 * (1 - lowK)) * camZoom).add(V(0, (10 - 6 * lowK) * camZoom, 0)).applyAxisAngle(Y, orbitYaw);
