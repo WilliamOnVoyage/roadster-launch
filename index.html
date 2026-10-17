@@ -74,7 +74,6 @@ canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
 #lander.on{display:flex}#lander b{font:800 italic 22px var(--display);margin:0 4px}
 #lander .ok b{color:#7dffb0}#lander .warn b{color:#ffd36b}#lander .bad b{color:#ff5a4a}
 #lander i{display:inline-block;width:90px;height:7px;margin-left:6px;vertical-align:middle;background:linear-gradient(90deg,#ff8a4a var(--f),rgba(255,255,255,.15) var(--f));border:1px solid rgba(255,255,255,.3)}
-.touchF{top:calc(124px + env(safe-area-inset-top,0px))!important;font-size:22px!important}
 @media (max-width:640px){#lander{left:max(16px,env(safe-area-inset-left,0px));transform:none;top:calc(64px + env(safe-area-inset-top,0px));gap:12px;font-size:10px;letter-spacing:.08em}#lander b{font-size:16px;margin:0 2px}#lander i{width:52px;height:6px}} /* clear of the restart / rocket buttons on the right */
 @media (pointer:coarse) and (orientation:portrait){#guide{top:calc(205px + env(safe-area-inset-top,0px))}} /* below the HUD rows on a tall phone */
 @media (pointer:coarse){html #cue.mars{top:71%;font-size:15px;letter-spacing:.14em;white-space:normal;width:90vw;text-align:center}} /* above the thumb controls */
@@ -179,15 +178,19 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-
 .touch button.big{width:78px;height:78px;border-color:rgba(255,80,90,.8)}.touch button.wide{width:auto;height:62px;border-radius:31px}
 .touch button.on,.touchR.on{background:rgba(255,43,61,.38);border-color:var(--led)}
 #tl{left:max(16px,env(safe-area-inset-left,0px))} #tr{right:max(16px,env(safe-area-inset-right,0px));align-items:flex-end}
-.touch.rk{display:none!important}
-#rkL{left:max(16px,env(safe-area-inset-left,0px))} #rkR{right:max(16px,env(safe-area-inset-right,0px));align-items:flex-end}
+#tr .rpad{display:flex;gap:10px;align-items:flex-end}
+#tr .rpad .flip{width:62px;height:62px}#tr .rpad .flip[hidden]{display:none}
+#tr .rpad .big{width:100px;height:100px;font-size:14px;font-weight:700;letter-spacing:.14em;border-color:rgba(127,233,255,.75);background:rgba(127,233,255,.1)}
+#tr .rpad .big.on{background:rgba(127,233,255,.35);border-color:#7fe9ff}
+body.rk #tr .rpad .big{border-color:rgba(255,140,60,.95);background:rgba(255,90,30,.22);box-shadow:0 0 18px rgba(255,110,40,.35)}
+body.rk #tr .rpad .big.on{background:rgba(255,110,40,.6);box-shadow:0 0 26px rgba(255,120,50,.8)}
+.touch button.ctx{width:auto;height:56px;border-radius:28px;padding:0 20px;flex-direction:row;gap:8px;border-color:rgba(255,150,70,.95);background:rgba(255,90,30,.3);font:700 13px var(--mono);letter-spacing:.16em;animation:ctxPulse 1.1s ease-in-out infinite}
+.touch button.ctx b{font-size:20px}.touch button.ctx i{font-size:12px;opacity:1;letter-spacing:.16em}.touch button.ctx[hidden]{display:none}
+@keyframes ctxPulse{0%,100%{transform:scale(1);box-shadow:0 0 14px rgba(255,110,40,.45)}50%{transform:scale(1.08);box-shadow:0 0 32px rgba(255,130,50,.95)}}
 .pad{position:relative;width:150px;height:150px;border-radius:50%;border:1px solid #3a404a;background:radial-gradient(circle,rgba(127,233,255,.12),rgba(10,12,16,.55) 72%);pointer-events:auto;touch-action:none}
 .pad .knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:rgba(127,233,255,.22);border:1px solid rgba(127,233,255,.85);box-shadow:0 0 16px rgba(127,233,255,.5);pointer-events:none}
 .pad span{position:absolute;font:600 9px var(--mono);letter-spacing:.12em;color:rgba(233,237,242,.8);pointer-events:none;white-space:nowrap}
 .pad .pu{top:9px;left:50%;transform:translateX(-50%)}.pad .pd{bottom:9px;left:50%;transform:translateX(-50%)}.pad .pl{left:10px;top:50%;transform:translateY(-50%);font-size:15px}.pad .pr{right:10px;top:50%;transform:translateY(-50%);font-size:15px}
-.touch button.burn{width:100px;height:100px;font-size:15px;font-weight:700;letter-spacing:.16em;border-color:rgba(255,140,60,.95);background:rgba(255,90,30,.2);box-shadow:0 0 18px rgba(255,110,40,.35)}
-.touch button.burn.on{background:rgba(255,110,40,.6);box-shadow:0 0 26px rgba(255,120,50,.8)}
-.touchR.txt{font:700 11px var(--mono)!important;letter-spacing:.1em}
 .touchR{position:fixed;display:none;top:calc(72px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));width:44px;height:44px;font-size:20px;pointer-events:auto}
 #result .best-new{display:inline-block;margin-bottom:6px;padding:3px 10px;font:700 11px var(--mono);letter-spacing:.3em;color:#06070a;background:var(--thrust);box-shadow:0 0 18px rgba(127,233,255,.7)}
 #result .score-big{margin:4px 0 2px;font-family:var(--display);font-weight:800;font-style:italic;line-height:1;letter-spacing:.03em}
@@ -339,7 +342,7 @@ body.resultup #mis,body.resultup #guide,body.resultup #cue,body.resultup #pops{d
 @media (max-height:470px){#start h1{display:none}#start{padding-top:10px;padding-bottom:12px}#garage{grid-template-columns:auto auto;column-gap:14px}#garage .swatches{max-width:220px}#garage .glb{grid-column:1/-1}} /* short windows and phones held sideways */
 @media (orientation:landscape) and (max-height:500px){html #start.lobby #garage{grid-template-columns:1fr;width:min(46vw,330px)}html #start.lobby #garage .swatches{max-width:none}html #start.lobby #garage #pname{width:100%;box-sizing:border-box}html #start.lobby #startBtn{width:100%}}
 @media (pointer:coarse) and (max-height:470px){#start:not(.lobby){padding-bottom:12px}#start:not(.lobby) h1{display:block;font-size:22px}}
-@media (pointer:coarse){body.rk .touch:not(.rk){display:none!important}body.rk .touch.rk{display:flex!important}.br{display:none}html,body{touch-action:none}.touch{display:flex}.touchR{display:flex}.keys,#keysBtn{display:none}.bl{bottom:calc(168px + env(safe-area-inset-bottom,0px))}}
+@media (pointer:coarse){.br{display:none}html,body{touch-action:none}.touch{display:flex}.touchR{display:flex}.keys,#keysBtn{display:none}.bl{bottom:calc(184px + env(safe-area-inset-bottom,0px))}}
 @media (max-width:640px){#msg{white-space:normal;width:92vw;text-align:center;font-size:17px;letter-spacing:.12em;line-height:1.35}}
 @media (max-width:640px){.keys,#keysBtn{display:none}.speed{font-size:44px}.br{display:none}}
 @media (prefers-reduced-motion:reduce){#msg{transition:none}#start kbd{animation:none}}
@@ -392,12 +395,9 @@ body.resultup #mis,body.resultup #guide,body.resultup #cue,body.resultup #pops{d
 </div>
 <div class="hud br">Unofficial fan-made simulator inspired by a 2026 hypercar launch night. Not affiliated with or endorsed by any car maker.</div>
 <div id="msg"></div>
-<div class="touch" id="tl"><div class="tpair"><button data-k="KeyA"><b>⟲</b><i>ROLL</i></button><button data-k="KeyD"><b>⟳</b><i>ROLL</i></button></div><button data-k="Space" class="wide">JETS</button></div>
-<div class="touch" id="tr"><div class="tpair"><button data-k="ArrowUp"><b>▲</b><i>FLIP</i></button><button data-k="ArrowDown"><b>▼</b><i>FLIP</i></button></div><div class="tpair low"><button data-k="KeyS">BRAKE</button><button data-k="KeyW" class="big">GO</button></div></div>
-<div class="touch rk" id="rkL"><div class="pad" id="rkPad" aria-label="Steer"><i class="knob"></i><span class="pu">NOSE UP</span><span class="pd">NOSE DOWN</span><span class="pl">◀</span><span class="pr">▶</span></div></div>
-<div class="touch rk" id="rkR"><button data-k="KeyW" class="burn">BURN</button></div>
+<div class="touch" id="tl"><div class="pad" id="stick" aria-label="Drive"><i class="knob"></i><span class="pu">GO</span><span class="pd">BRAKE</span><span class="pl">◀</span><span class="pr">▶</span></div></div>
+<div class="touch" id="tr"><button data-k="KeyF" class="ctx" id="ctxBtn" hidden><b>🚀</b><i>ROCKET</i></button><div class="rpad"><button data-k="ArrowUp" class="flip" id="flipBtn" hidden><b>↻</b><i>FLIP</i></button><button data-k="Space" class="big" id="jetBtn">JETS</button></div></div>
 <button class="touchR" data-k="KeyR" aria-label="Restart">↺</button>
-<button class="touchR touchF" data-k="KeyF" aria-label="Rocket mode">🚀</button>
 <div id="cue"></div>
 <div id="result" hidden></div>
 <div id="shout"></div>
@@ -419,7 +419,7 @@ body.resultup #mis,body.resultup #guide,body.resultup #cue,body.resultup #pops{d
     <div class="gstat" id="gstat"></div>
   </div>
   <p class="key"><span><kbd data-k="KeyW" class="go">W</kbd>drive</span><span><kbd data-k="KeyA">A</kbd><kbd data-k="KeyD">D</kbd>steer · roll</span><span><kbd data-k="ArrowUp">↑</kbd><kbd data-k="ArrowDown">↓</kbd>flip</span><span><kbd data-k="Space" class="wide">Space</kbd>jet</span><span><kbd data-k="KeyF">F</kbd>rocket to Mars</span></p>
-  <p class="tap">Hold <kbd class="go">GO</kbd> to drive · 🚀 up high flies to Mars</p>
+  <p class="tap">Push the stick <kbd class="go">▲</kbd> to drive · <kbd>JETS</kbd> to jump</p>
   <div id="load">Loading vehicles…</div>
 </div>
 <div id="paint" hidden><div class="pcard">
@@ -1103,17 +1103,17 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT')
   if (e.code === 'KeyF' && !e.repeat) toggleRocket(); });
 addEventListener('keyup', e => { if (e.target && e.target.tagName === 'INPUT') return; keys[e.code] = false; for (const k of document.querySelectorAll(`#start kbd[data-k="${e.code}"]`)) k.classList.remove('down'); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
-for (const b of document.querySelectorAll('.touch button, .touchR')) { const k = b.dataset.k;
+for (const b of document.querySelectorAll('.touch button, .touchR')) { const k = b.dataset.k; 
   b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add('on'); if (k === 'KeyF') { toggleRocket(); return; } if (k === 'KeyR' && st.finished && hero.state !== 'off') return; if (k === 'KeyR' && st.score > 0 && resEl.hidden && st.phase !== 'crashed') { openSummary(); return; } if (k === 'KeyR' || retryReady()) { spawn(); b.dataset.swallow = '1'; } else if (!st.summary) keys[k] = true; });
   const up = () => { b.classList.remove('on'); b.dataset.swallow = ''; if (k !== 'KeyR') keys[k] = false; };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, up);
   b.addEventListener('touchstart', e => e.preventDefault(), { passive: false }); b.addEventListener('contextmenu', e => e.preventDefault()); }
-{ const pad = document.getElementById('rkPad'), knob = pad.querySelector('.knob'); let id = null; // rocket stick
-  const set = (dx, dy) => { const r = pad.clientWidth / 2 || 75, x = Math.max(-1, Math.min(1, dx / r)), y = Math.max(-1, Math.min(1, dy / r)); keys.KeyA = x < -.3; keys.KeyD = x > .3; keys.ArrowUp = y < -.3; keys.ArrowDown = y > .3; knob.style.transform = `translate(${x * r * .55}px,${y * r * .55}px)`; };
+{ const pad = document.getElementById('stick'), knob = pad.querySelector('.knob'); let id = null; // the thumb stick: steer / roll and flip / fly
+  const set = (dx, dy) => { const r = pad.clientWidth / 2 || 75, x = Math.max(-1, Math.min(1, dx / r)), y = Math.max(-1, Math.min(1, dy / r)); STICK.x = x; STICK.y = y; STICK.on = true; stickKeys(); knob.style.transform = `translate(${x * r * .55}px,${y * r * .55}px)`; };
   const at = e => { const b = pad.getBoundingClientRect(); set(e.clientX - b.left - b.width / 2, e.clientY - b.top - b.height / 2); };
   pad.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; try { pad.setPointerCapture(id); } catch (_) {} at(e); });
   pad.addEventListener('pointermove', e => { if (e.pointerId === id) at(e); });
-  const end = e => { if (e.pointerId !== id) return; id = null; keys.KeyA = keys.KeyD = keys.ArrowUp = keys.ArrowDown = false; knob.style.transform = ''; };
+  const end = e => { if (e.pointerId !== id) return; id = null; STICK.on = false; stickKeys(); knob.style.transform = ''; };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, end);
   pad.addEventListener('touchstart', e => e.preventDefault(), { passive: false }); }
 addEventListener('selectstart', e => { if (!(e.target && e.target.tagName === 'INPUT')) e.preventDefault(); }); addEventListener('contextmenu', e => { if (matchMedia('(pointer:coarse)').matches) e.preventDefault(); });
@@ -1629,7 +1629,7 @@ const CRASH_TIP = {
   roll: TOUCH_UI ? 'Tap ROLL right after the ramp to flip back upright' : 'Tap A or D right after the ramp to roll back upright',
   nose: 'Keep the nose pointing down the runway when you land',
   spin: 'Finish your spins early: the landing jets only catch a level car',
-  carry: TOUCH_UI ? 'Hold GO in the air to carry speed over the line-up' : 'Hold W in the air to carry speed over the line-up',
+  carry: TOUCH_UI ? 'Keep the stick ▲ in the air to carry speed over the line-up' : 'Hold W in the air to carry speed over the line-up',
   hop: TOUCH_UI ? 'Tap JETS at the blue lines to hop the line-up' : 'Hit SPACE at the blue lines to hop the line-up',
   ramp: 'Come off the deck cleanly before you start a trick',
   other: 'Land level, nose first, and not too fast',
@@ -1642,10 +1642,10 @@ function updateHints() {
     if (!st.rk.land) { setHint(alt > LAND_MIN ? (TOUCH_UI ? 'TAP LAND · LANDING MODE' : 'F → LANDING MODE') : 'TOO LOW · PULL UP', 'mars'); return; }
     setHint(st.fuel <= 0 ? 'OUT OF FUEL' : alt > 140 ? (TOUCH_UI ? 'HOLD BURN TO SLOW DOWN' : 'HOLD W · BURN TO SLOW DOWN') : TOUCH_UI ? 'TAP CAR · THEN JETS' : 'F → CAR MODE', 'mars'); return; }
   if (st.mode === 'air' && st.world === 'mars' && !MARS.done) { setHint(st.fuel <= 0 ? 'OUT OF FUEL' : 'LAND IT SOFTLY', 'mars'); return; }
-  if (st.mode === 'air' && st.world !== 'mars' && st.pos.y > 12 && st.phase !== 'crashed') { setHint(TOUCH_UI ? 'TAP 🚀 ROCKET MODE' : 'F → ROCKET MODE', 'mars'); return; }
+  if (st.mode === 'air' && st.world !== 'mars' && st.pos.y > 12 && st.phase !== 'crashed') { setHint(TOUCH_UI ? 'TAP 🚀 ROCKET' : 'F → ROCKET MODE', 'mars'); return; }
   if (st.mode === 'air' && st.js && st.phase !== 'crashed' && !st.finished) {
     const up = 1 - 2 * (st.q.x * st.q.x + st.q.z * st.q.z), rolling = st.tricks && st.tricks.z;
-    if (up < .3 && !rolling && st.js.t < 3 && again('roll')) t = TOUCH_UI ? 'TAP ROLL  ⟲ ⟳' : 'ROLL!  A / D';
+    if (up < .3 && !rolling && st.js.t < 3 && again('roll')) t = TOUCH_UI ? 'STICK ◀ ▶ TO ROLL' : 'ROLL!  A / D';
     else if (!coach.flipped && up > .85 && !rolling && !(st.tricks && st.tricks.x) && st.js.flipN === 0) { // optional: teach the flip once there is room to land it
       const vy = st.vel.y, tLand = (vy + Math.sqrt(Math.max(0, vy * vy + 2 * G * st.pos.y))) / G;
       if (st.pos.y > 5 && tLand > 1.25) { setHint(TOUCH_UI ? 'BONUS: TAP FLIP' : 'BONUS:  ↑ / ↓  FLIP', true); return; } }
@@ -2835,14 +2835,22 @@ const smokePass = new SmokePass(); composer.addPass(smokePass);
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), .65, .5, .98));
 composer.addPass(new OutputPass());
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+const STICK = { x: 0, y: 0, on: false, held: new Set() };
+function stickKeys() { // the stick's direction to keys for whatever you're driving right now; re-run every frame, so a held stick follows a mode change
+  const want = new Set(); if (STICK.on) { const fly = st.mode === 'rocket'; if (STICK.x < -.3) want.add('KeyA'); if (STICK.x > .3) want.add('KeyD');
+    if (STICK.y < -.3) want.add(fly ? 'ArrowUp' : 'KeyW'); if (STICK.y > .3) want.add(fly ? 'ArrowDown' : 'KeyS'); }
+  for (const k of STICK.held) if (!want.has(k)) keys[k] = false; for (const k of want) keys[k] = true; STICK.held = want;
+}
 let tuiKey = '';
-function touchUI() { // phones: the buttons say what they do right now
-  if (!TOUCH) return; const rk = st.mode === 'rocket', land = rk && !!(st.rk && st.rk.land), ground = st.mode === 'ground' || st.mode === 'ramp', dive = rk && st.world === 'mars' && !land;
-  const key = [rk, land, ground, dive].join(); if (key === tuiKey) return; tuiKey = key; document.body.classList.toggle('rk', rk);
-  const pad = document.getElementById('rkPad'); pad.querySelector('.pu').textContent = land ? 'FORWARD' : 'NOSE UP'; pad.querySelector('.pd').textContent = land ? 'BACK' : 'NOSE DOWN';
-  const f = document.querySelector('.touchF'); f.textContent = dive ? 'LAND' : land ? 'CAR' : '🚀'; f.classList.toggle('txt', dive || land);
-  const lab = (k, b, i) => { const el = document.querySelector(`#tl button[data-k="${k}"], #tr button[data-k="${k}"]`); if (el) el.innerHTML = `<b>${b}</b><i>${i}</i>`; };
-  lab('KeyA', ground ? '◀' : '⟲', ground ? 'STEER' : 'ROLL'); lab('KeyD', ground ? '▶' : '⟳', ground ? 'STEER' : 'ROLL');
+function touchUI() { if (TOUCH) stickKeys(); // phones: the stick and buttons say what they do right now, and the one special action shows up only when you can use it
+  if (!TOUCH) return; const rk = st.mode === 'rocket', land = rk && !!(st.rk && st.rk.land), air = st.mode === 'air', dive = rk && st.world === 'mars' && !land;
+  let ctx = ''; if (rk) ctx = dive ? (st.pos.y - marsFloor(st.pos.x, st.pos.z) > LAND_MIN ? 'LAND' : '') : 'CAR';
+  else if (air && !MARS.done && !st.finished && st.phase !== 'crashed' && (st.world === 'mars' || st.pos.y > 12)) ctx = 'ROCKET';
+  const key = [rk, land, air, ctx].join(); if (key === tuiKey) return; tuiKey = key; document.body.classList.toggle('rk', rk);
+  const pad = document.getElementById('stick'), L = (c, t) => { pad.querySelector(c).textContent = t; };
+  L('.pu', rk ? (land ? 'FORWARD' : 'NOSE UP') : air ? 'THRUST' : 'GO'); L('.pd', rk ? (land ? 'BACK' : 'NOSE DOWN') : 'BRAKE'); L('.pl', air ? '⟲' : '◀'); L('.pr', air ? '⟳' : '▶');
+  document.getElementById('jetBtn').textContent = rk ? 'BURN' : 'JETS'; document.getElementById('flipBtn').hidden = !air;
+  const c = document.getElementById('ctxBtn'); c.hidden = !ctx; if (ctx) c.innerHTML = { ROCKET: '<b>🚀</b><i>ROCKET</i>', LAND: '<b>⬇</b><i>LAND</i>', CAR: '<b>🚗</b><i>CAR</i>' }[ctx];
 }
 function setPR(v) { PR.cur = v; renderer.setPixelRatio(v); composer.setPixelRatio(v); resize(); }
 // adaptive resolution: every 1.5 s look at the frame rate; under ~42 fps drop the resolution a step, and only keep the drop if it helped
