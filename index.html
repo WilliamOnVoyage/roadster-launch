@@ -2848,7 +2848,9 @@ function syncTitle() { document.body.classList.toggle('titleup', !startCard.clas
 new MutationObserver(syncTitle).observe(startCard, { attributes: true, attributeFilter: ['class'] });
 const fsBtn = $('fsBtn'), fsOK = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled), fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 function fsToggle() { const d = document.documentElement; try { const r = fsOn() ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (d.requestFullscreen || d.webkitRequestFullscreen).call(d, { navigationUI: 'hide' }); if (r && r.catch) r.catch(() => {}); } catch (_) {} }
-if (fsOK) { fsBtn.hidden = false; fsBtn.onclick = () => { fsToggle(); canvas.focus(); }; } // iPhone Safari has no page fullscreen: the button stays hidden there
+const IOS = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), APP = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+if (fsOK) { fsBtn.hidden = false; fsBtn.onclick = () => { fsToggle(); canvas.focus(); }; }
+else if (IOS && !APP) { fsBtn.hidden = false; fsBtn.onclick = () => { flash('Full screen: Share → Add to Home Screen', 4, true); canvas.focus(); }; } // iPhone Safari won't let a page go full screen; a home-screen launch is full screen
 for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => fsBtn.classList.toggle('on', fsOn()));
 document.getElementById('startBtn').onclick = () => { unlockAudio(); if (TOUCH && fsOK && !fsOn()) fsToggle(); setLobby(false); startShot(); canvas.focus(); }; // on a phone START also takes the whole screen // START: the original opening, ready to drive
 addEventListener('keydown', e => { if (document.body.classList.contains('lobby') && e.code === 'Enter' && !(e.target && e.target.tagName === 'INPUT')) document.getElementById('startBtn').click(); });
