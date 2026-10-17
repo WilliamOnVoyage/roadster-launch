@@ -1094,6 +1094,7 @@ function toggleKeys(open = keysEl.hidden) { keysEl.hidden = !open; try { localSt
 try { if (localStorage.getItem('rl_keys') === '1') keysEl.hidden = false; } catch (e) {}
 keysBtn.addEventListener('click', () => toggleKeys());
 addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') e.target.blur(); return; }
+  if (!lbEl.hidden) return; // the leaderboard is on top: keys don't drive, restart or summarise the run underneath it
   if (retryReady() && !e.repeat && !['KeyM', 'KeyH', 'MetaLeft', 'MetaRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'ShiftLeft', 'ShiftRight', 'Tab'].includes(e.code)) { e.preventDefault(); spawn(); return; }
   keys[e.code] = true; for (const k of document.querySelectorAll(`#start kbd[data-k="${e.code}"]`)) k.classList.add('down'); if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'KeyM') { snd.on = !snd.on; flash(snd.on ? 'Sound on' : 'Sound off'); }
@@ -1532,6 +1533,7 @@ const REC = { r: null, chunks: [], blob: null, url: null, mime: '', cv: document
 REC.ctx = REC.cv.getContext('2d');
 function recFrame() { // called right after each composer.render(), while the WebGL frame is still readable
   if (!REC.r || REC.r.state !== 'recording') return;
+  if (!canvas.width || !canvas.height || !REC.cv.width || !REC.cv.height) return; // collapsed canvas (zero-size window, hidden frame): drawImage would throw and kill the game loop
   const now = performance.now();
   if (now - REC.t0 > REC.MAX_S * 1000) { try { REC.r.stop(); } catch (e) {} return; }
   if (now - REC.lastDraw < 1000 / REC.FPS - 4) return; REC.lastDraw = now; // the stream only samples 30 fps: skip the copies it would drop
@@ -1616,7 +1618,7 @@ function recStart() {
   REC.r.onstop = () => { REC.blob = new Blob(REC.chunks, { type: REC.mime || 'video/webm' }); REC.url = URL.createObjectURL(REC.blob); recReady(); };
   REC.r.start(500);
 }
-function recStop(delay = 1200) { const r = REC.r; setTimeout(() => { try { if (r && r.state === 'recording') r.stop(); } catch (e) {} }, delay); } // this run's recorder, not one a quick restart has started since
+function recStop(delay = 1200) { const r = REC.r; setTimeout(() => { try { if (r && r.state !== 'inactive') r.stop(); } catch (e) {} }, delay); } // this run's recorder, not one a quick restart has started since
 function recDownload() { if (!REC.url) return; const a = document.createElement('a'); a.href = REC.url; a.download = `roadster-launch-${Date.now()}.${/mp4/.test(REC.mime) ? 'mp4' : 'webm'}`; document.body.appendChild(a); a.click(); a.remove(); }
 const recName = () => `roadster-launch-${Date.now()}.${/mp4/.test(REC.mime) ? 'mp4' : 'webm'}`; // the file name recDownload gives it, for the share sheet
 function recReady() { // the replay is saved: wake up the buttons that need the file
@@ -1914,18 +1916,19 @@ function lbRender(d) {
   ol.innerHTML = d && d.top && d.top.length ? d.top.map((r, k) => `<li style="--i:${k}" class="${r.rank <= 3 ? 'r' + r.rank : ''} ${r.me ? 'me' : ''}"><i>${r.rank}</i><b>${esc(r.name)}</b><span>${r.score.toLocaleString('en-US')}</span></li>`).join('') : '<li class="empty">No runs yet. Be the first!</li>';
   lbEl.querySelector('.you').textContent = d && d.rank && !d.top.some(r => r.me) ? `You: #${d.rank} · ${(d.best || 0).toLocaleString('en-US')}` : d && d.total ? `${d.total.toLocaleString('en-US')} racers` : '';
 }
+function lbClose() { lbEl.hidden = true; recResume(); }
 async function lbOpen() {
-  lbEl.hidden = false; lbEl.querySelector('ol').innerHTML = '<li class="empty">Loading…</li>'; lbEl.querySelector('.you').textContent = '';
+  lbEl.hidden = false; recPause(); // the run waits underneath (see frame) until it closes lbEl.querySelector('ol').innerHTML = '<li class="empty">Loading…</li>'; lbEl.querySelector('.you').textContent = '';
   try { const r = await fetch(`${LB_URL}?device=${DEVICE}`); lbRender(await r.json()); } catch (e) { lbEl.querySelector('ol').innerHTML = '<li class="empty">Leaderboard unavailable right now</li>'; }
 }
 async function lbSubmit(name, score) {
   const r = await fetch(LB_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device: DEVICE, name, score }) });
   const d = await r.json(); if (!r.ok) throw new Error(d.error || 'failed'); track('submit'); return d;
 }
-lbEl.querySelector('.back').onclick = () => { lbEl.hidden = true; };
+lbEl.querySelector('.back').onclick = lbClose;
 fetch(`${LB_URL}?device=${DEVICE}`).then(r => r.json()).then(d => { if (d && d.total >= 10) document.getElementById('gstat').textContent = `${d.total.toLocaleString('en-US')} racers on the board`; }).catch(() => {}); // real numbers only
-lbEl.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.target === lbEl) lbEl.hidden = true; });
-addEventListener('keydown', e => { if (!lbEl.hidden && (e.code === 'Escape' || e.code === 'Backspace') && !(e.target && e.target.tagName === 'INPUT')) { lbEl.hidden = true; e.stopImmediatePropagation(); } }, true);
+lbEl.addEventListener('pointerdown', e => { e.stopPropagation(); if (e.target === lbEl) lbClose(); });
+addEventListener('keydown', e => { if (!lbEl.hidden && (e.code === 'Escape' || e.code === 'Backspace') && !(e.target && e.target.tagName === 'INPUT')) { lbClose(); e.stopImmediatePropagation(); } }, true);
 document.getElementById('lbBtn').onclick = lbOpen;
 function lbResultRow(score) { // the line under the big score: name + one button, then your rank
   const row = resEl.querySelector('.lbrow'); if (!row) return; const inp = row.querySelector('input'), btn = row.querySelector('button');
@@ -2017,9 +2020,10 @@ function missionDone(k, pts, title) { (st.mdone ||= {})[k] = true; addScore(pts)
 document.getElementById('misBtn').onclick = e => { e.stopPropagation(); misEl.hidden = !misEl.hidden; store.set('rl_misOpen', !misEl.hidden); missionsUI(); };
 misEl.hidden = !store.get('rl_misOpen', !matchMedia('(pointer:coarse)').matches); // open on desktops, closed on phones until tapped
 subBtn.onclick = e => { e.stopPropagation(); openSummary(); };
-function openSummary() { if (!(st.score > 0) || !resEl.hidden || st.phase === 'crashed') return; st.summary = true; showResult();
-  try { if (REC.r && REC.r.state === 'recording') { REC.r.pause(); REC.pausedAt = performance.now(); } } catch (e) {} } // no frozen stretch in the replay
-function closeSummary() { try { if (REC.r && REC.r.state === 'paused') { REC.r.resume(); REC.t0 += performance.now() - REC.pausedAt; } } catch (e) {} st.summary = false; resEl.hidden = true; document.body.classList.remove('resultup'); canvas.focus(); }
+function recPause() { try { if (REC.r && REC.r.state === 'recording') { REC.r.pause(); REC.pausedAt = performance.now(); } } catch (e) {} } // the run is held: no frozen stretch in the replay
+function recResume() { try { if (REC.r && REC.r.state === 'paused' && !st.summary && lbEl.hidden) { REC.r.resume(); REC.t0 += performance.now() - REC.pausedAt; } } catch (e) {} }
+function openSummary() { if (!(st.score > 0) || !resEl.hidden || st.phase === 'crashed') return; st.summary = true; showResult(); recPause(); }
+function closeSummary() { st.summary = false; recResume(); resEl.hidden = true; document.body.classList.remove('resultup'); canvas.focus(); }
 /* ============ trick pops and score: every half roll / full flip pops a punchy call-out, combos multiply, the landing banks it ============ */
 const popsEl = document.getElementById('pops'), scoreEl = document.getElementById('score');
 const ROLL_NAME = n => ['', 'ROLL OUT!', 'BARREL ROLL!', '1.5 ROLLS!', 'DOUBLE ROLL!!', '2.5 ROLLS!', 'TRIPLE ROLL!!!'][n] || `${n / 2} ROLLS!!!`;
@@ -2881,9 +2885,10 @@ let last = performance.now(), running = false, ambT = 0, slowT = 0, last0 = perf
 function frame(now) {
   const raw = (now - last) / 1000, dt = Math.min(.033, raw); last = now;
   if (window.__pause) { smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); requestAnimationFrame(frame); return; } // test hook: render only, the sim is stepped by hand
-  dynRes(raw); if (running && !st.summary) for (let i = 0; i < 4; i++) step(dt / 4); // the score card pauses the run
+  const held = st.summary || !lbEl.hidden; // the score card or the leaderboard is up: the run waits
+  dynRes(raw); if (running && !held) for (let i = 0; i < 4; i++) step(dt / 4); // the score card pauses the run
   ambT += dt; if (ambT > .12) { ambT = 0; const m = machines[(rnd() * machines.length) | 0]; puff(m.clone().add(V((rnd() - .5) * 4, 0, 0)), V((rnd() - .5) * 2, .4, 2 + rnd() * 2), 2.5, 9, rnd() < .35 ? 0xc87c86 : 0xaab1bb, .32, 2.2); }
-  updateSmoke(dt); updateBillows(dt); updateVol(dt); updateProps(dt); heroUpdate(dt); updateShock(dt); updateCrowd(dt, now / 1000); updateGlow(now / 1000); updateCoils(dt); updateMars(); updateEntry(); touchUI(); updateSky(dt, now / 1000); updateRings(dt, now / 1000); updateProgress(); updateFloods(dt); updateCamera(dt); updateAudio(); smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); recFrame(); dashFrame(); netTick(now); aiTick(now);
+  updateSmoke(dt); updateBillows(dt); updateVol(dt); updateProps(dt); if (!held) heroUpdate(dt); updateShock(dt); updateCrowd(dt, now / 1000); updateGlow(now / 1000); updateCoils(dt); updateMars(); updateEntry(); touchUI(); updateSky(dt, now / 1000); updateRings(dt, now / 1000); updateProgress(); updateFloods(dt); updateCamera(dt); updateAudio(); smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); recFrame(); dashFrame(); netTick(now); aiTick(now);
   if (smokePass.enabled) { slowT = (now - last0) > 25 ? slowT + dt : Math.max(0, slowT - dt); if (slowT > 1) smokePass.degrade(); } last0 = now;
   const sp = st.mode === 'air' || st.mode === 'rocket' ? st.vel.length() : Math.abs(st.v);
   const reversing = st.mode === 'ground' && st.v < -.05; spdEl.textContent = (reversing ? 'R ' : '') + Math.round(sp * 3.6);
