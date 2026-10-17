@@ -2521,10 +2521,11 @@ function marsH(x, z) { // a flat landing strip along the runway; everywhere else
 }
 /* ============ Mars ground physics: the car drives on the surface that's drawn (the 15 m terrain mesh), tilts with it, gravity pulls it
    down the slopes, it flies off crests it takes too fast, and steep canyon walls, big rocks and the honour guard are solid ============ */
+const GRID_H = new Map(); function gridH(i, j, s) { const k = i * 1e6 + j; let h = GRID_H.get(k); if (h === undefined) { if (GRID_H.size > 6000) GRID_H.clear(); h = marsH(i * s, j * s); GRID_H.set(k, h); } return h; } // grid-point heights, cached: the physics asks for the same few dozen many times a second
 function marsFloor(x, z) { // exactly the drawn triangles: vertices every 15 m on world multiples of 15, each cell split along its b-d diagonal like PlaneGeometry
-  const s = 15, i = Math.floor(x / s), j = Math.floor(z / s), u = x / s - i, v = z / s - j, x0 = i * s, z0 = j * s, hb = marsH(x0, z0 + s), hd = marsH(x0 + s, z0);
-  if (u + v <= 1) { const ha = marsH(x0, z0); return ha + (hd - ha) * u + (hb - ha) * v; }
-  const hc = marsH(x0 + s, z0 + s); return hc + (hb - hc) * (1 - u) + (hd - hc) * (1 - v);
+  const s = 2400 / (MARS.seg || 160), i = Math.floor(x / s), j = Math.floor(z / s), u = x / s - i, v = z / s - j, hb = gridH(i, j + 1, s), hd = gridH(i + 1, j, s);
+  if (u + v <= 1) { const ha = gridH(i, j, s); return ha + (hd - ha) * u + (hb - ha) * v; }
+  const hc = gridH(i + 1, j + 1, s); return hc + (hb - hc) * (1 - u) + (hd - hc) * (1 - v);
 }
 function floorAt(x, z) { return st.world === 'mars' ? marsFloor(x, z) : groundY(x, z); }
 function marsSurf(pos, F) { // the car on its four tyre patches: ride height and up vector
@@ -2576,7 +2577,7 @@ function buildMars() {
   if (MARS.terrain) return;
   const srgb = (h) => new THREE.Color(h), rust = srgb(0xa9502a), dark = srgb(0x6b3420), dust = srgb(0xc98a5e), basalt = srgb(0x4a2a1e);
   // ground: 2.4 km tile, 15 m grid (re-centred on the car in 300 m steps, heights from world coordinates so nothing swims)
-  const g = new THREE.PlaneGeometry(2400, 2400, 160, 160); g.rotateX(-Math.PI / 2); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
+  MARS.seg = LITE ? 120 : 160; /* phones: 20 m cells, the 300 m re-centring steps stay on the grid */ const g = new THREE.PlaneGeometry(2400, 2400, MARS.seg, MARS.seg); g.rotateX(-Math.PI / 2); g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3), 3));
   const grain = canvasTex(512, 512, (c, w, h) => { c.fillStyle = '#d8d0c8'; c.fillRect(0, 0, w, h);
     for (let i = 0; i < 60000; i++) { const v = 150 + rnd() * 105 | 0; c.fillStyle = `rgba(${v},${v * .92 | 0},${v * .86 | 0},${rnd() * .5})`; c.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 2, 1 + rnd() * 2); }
     for (let i = 0; i < 260; i++) { c.fillStyle = `rgba(60,30,20,${.05 + rnd() * .12})`; c.beginPath(); c.ellipse(rnd() * w, rnd() * h, 2 + rnd() * 9, 1 + rnd() * 5, rnd() * 3, 0, 7); c.fill(); } }, 1);
@@ -2587,7 +2588,7 @@ function buildMars() {
   const rg = new THREE.IcosahedronGeometry(1, 1), rp = rg.attributes.position, tv = V(0, 0, 0);
   for (let i = 0; i < rp.count; i++) { tv.fromBufferAttribute(rp, i); tv.multiplyScalar(.75 + mHash(Math.round(tv.x * 9), Math.round(tv.y * 9), Math.round(tv.z * 9)) * .5); tv.y *= .62; rp.setXYZ(i, tv.x, tv.y, tv.z); }
   rg.computeVertexNormals();
-  MARS.rocks = new THREE.InstancedMesh(rg, new THREE.MeshStandardMaterial({ color: 0x6e3b26, roughness: .92, flatShading: true }), 900); MARS.rocks.castShadow = MARS.rocks.receiveShadow = true; MARS.rocks.frustumCulled = false; MARS.group.add(MARS.rocks);
+  MARS.rocks = new THREE.InstancedMesh(rg, new THREE.MeshStandardMaterial({ color: 0x6e3b26, roughness: .92, flatShading: true }), 900); MARS.rockMax = LITE ? 420 : 900; MARS.rocks.castShadow = MARS.rocks.receiveShadow = !LITE; MARS.rocks.frustumCulled = false; MARS.group.add(MARS.rocks);
   // sky dome: butterscotch, darker overhead, a white sun with the blue-grey halo Mars sunsets are known for
   MARS.skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { sunDir: { value: MARS_SUN }, uAlt: { value: 0 }, uHaze: { value: 0 } },
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); vec4 p = modelViewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * p; }',
@@ -2601,8 +2602,8 @@ function buildMars() {
         gl_FragColor = vec4(c * .92, 1.); }` });
   MARS.sky = new THREE.Mesh(new THREE.SphereGeometry(1300, 48, 24), MARS.skyMat); MARS.sky.renderOrder = -1; MARS.group.add(MARS.sky);
   const earthDot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xbfd8ff, transparent: true, opacity: .8, depthWrite: false, fog: false })); earthDot.scale.setScalar(9); earthDot.userData.dir = V(.6, .1, -.79).normalize(); MARS.earthDot = earthDot; MARS.group.add(earthDot); // the pale blue dot, low in the sky
-  MARS.sun = new THREE.DirectionalLight(0xfff1df, 3.4); MARS.sun.castShadow = true; MARS.sun.shadow.mapSize.setScalar(LITE ? 1024 : 2048); const sc = MARS.sun.shadow.camera; sc.left = sc.bottom = -45; sc.right = sc.top = 45; sc.near = 1; sc.far = 600; MARS.sun.shadow.bias = -.0004;
-  MARS.group.add(MARS.sun, MARS.sun.target);
+  MARS.sun = new THREE.DirectionalLight(0xfff1df, 3.4); MARS.sun.castShadow = !LITE; MARS.sun.shadow.mapSize.setScalar(LITE ? 1024 : 2048); const sc = MARS.sun.shadow.camera; sc.left = sc.bottom = -45; sc.right = sc.top = 45; sc.near = 1; sc.far = 600; MARS.sun.shadow.bias = -.0004;
+  if (LITE) { scene.add(MARS.sun, MARS.sun.target); MARS.sun.intensity = 0; } else MARS.group.add(MARS.sun, MARS.sun.target); // phones: always in the light list (a light appearing recompiles every shader, the stutter on arrival)
   // the car's reflections on Mars: the same sky, rendered into an environment map
   const es = new THREE.Scene(); es.add(new THREE.Mesh(new THREE.SphereGeometry(50, 32, 16), MARS.skyMat)); const fl = new THREE.Mesh(new THREE.CircleGeometry(48, 32), new THREE.MeshBasicMaterial({ color: new THREE.Color(.42, .22, .12) })); fl.rotation.x = -Math.PI / 2; fl.position.y = -2; es.add(fl);
   MARS.env = pmrem.fromScene(es, 0, .1, 200).texture;
@@ -2639,8 +2640,8 @@ function buildRunway() {
         P.set(x, marsH(x, RWY.z0 + z), RWY.z0 + z); Q.setFromAxisAngle(Y, face + yawJ + (t.car ? (x < 0 ? -.8 : .8) : 0)); Sc.setScalar(sc); M.compose(P, Q, Sc).multiply(t.rel); im.setMatrixAt(j, M);
         const col = t.car ? new THREE.Color([0xffffff, 0x3a3d42, 0xd8dadd, 0xc23a30, 0x9aa4b0][Math.floor(mHash(x, z, 24) * 5)]) : null; if (col) im.setColorAt(j, col);
         (MARS.guard ||= []).push({ x, z: RWY.z0 + z, r: t.car ? 2.1 : .4, top: P.y + (t.car ? 1.5 : 1.9), car: !!t.car, im, j, t, P: P.clone(), Q: Q.clone(), sc, col }); });
-      im.castShadow = true; im.receiveShadow = true; G0.add(im); }); };
-  if (pilots.length) place(pilots, (x, z) => mHash(x, z, 25) < .82 ? (mHash(x, z, 26) < .6 ? 0 : pilots.length - 1) : -1, [[-(RWY.half + 4), 5, .6], [RWY.half + 4, 5, .6]]);
+      im.castShadow = !LITE; im.receiveShadow = !LITE; G0.add(im); }); };
+  if (pilots.length) place(pilots, (x, z) => mHash(x, z, 25) < (LITE ? .22 : .82) ? (mHash(x, z, 26) < .6 ? 0 : pilots.length - 1) : -1, [[-(RWY.half + 4), 5, .6], [RWY.half + 4, 5, .6]]);
   cars.forEach(t => t.car = true); if (cars.length) place(cars, (x, z) => mHash(x, z, 27) < .9 ? Math.floor(mHash(x, z, 28) * cars.length) : -1, [[-(RWY.half + 13), 9, 2], [RWY.half + 13, 9, 2]]);
   // Earth, a blue-white world low in the Mars sky
   const et = canvasTex(512, 256, (c, w, h) => { const img = c.createImageData(w, h), d = img.data;
@@ -2666,7 +2667,7 @@ function marsRecenter(cx, cz, H) {
   P.needsUpdate = C.needsUpdate = true; g.computeBoundingSphere();
   // rocks in 24 m cells from 1 km behind to 1 km ahead; mostly small, a few big ones off the strip
   const o = new THREE.Object3D(); let n = 0; const z0 = Math.floor((cz - 1000) / 24), z1 = Math.floor((cz + 1000) / 24), rc = Math.round(cx / 24); MARS.rc = rc;
-  for (let cz2 = z0; cz2 <= z1 && n < 900; cz2++) for (let cx = rc - 12; cx <= rc + 12 && n < 900; cx++) {
+  for (let cz2 = z0; cz2 <= z1 && n < MARS.rockMax; cz2++) for (let cx = rc - 12; cx <= rc + 12 && n < MARS.rockMax; cx++) {
     const hsh = mHash(cx, cz2, 17); if (hsh > (Math.abs(cx) < 3 ? .5 : .35)) continue;
     const x = cx * 24 + (mHash(cx, cz2, 1) - .5) * 24, z = cz2 * 24 + (mHash(cx, cz2, 2) - .5) * 24; if (Math.abs(x) < 3.5) continue;
     const big = Math.abs(x) > 14 && mHash(cx, cz2, 6) < .18, sz = big ? 1.2 + mHash(cx, cz2, 7) * 2.6 : .15 + Math.pow(mHash(cx, cz2, 8), 2.5) * .9;
@@ -2677,7 +2678,7 @@ function marsRecenter(cx, cz, H) {
 const WORLD_EARTH = { bg: scene.background.clone(), fog: scene.fog.color.clone(), fogD: scene.fog.density, hemiSky: hemi.color.clone(), hemiGround: hemi.groundColor.clone(), hemiI: hemi.intensity };
 function setWorld(w) {
   if ((st.world || 'earth') === w) return; st.world = w; const mars = w === 'mars';
-  if (mars) { buildMars(); MARS.job = null; marsRecenter(0, Math.round(MARS_Z / 300) * 300); }
+  if (mars) { buildMars(); MARS.job = null; if (MARS.cx !== 0 || MARS.cz !== Math.round(MARS_Z / 300) * 300) marsRecenter(0, Math.round(MARS_Z / 300) * 300); } // usually built already, on the way (premars)
   MARS.group.visible = mars; G = mars ? 3.71 : 9.81;
   scene.background.copy(mars ? new THREE.Color(.78, .52, .33) : WORLD_EARTH.bg); scene.fog.color.copy(mars ? new THREE.Color(.78, .54, .35) : WORLD_EARTH.fog); scene.fog.density = mars ? .00068 : WORLD_EARTH.fogD;
   hemi.color.copy(mars ? new THREE.Color(0xd2a07a) : WORLD_EARTH.hemiSky); hemi.groundColor.copy(mars ? new THREE.Color(0x4a2416) : WORLD_EARTH.hemiGround); hemi.intensity = mars ? 1.0 : WORLD_EARTH.hemiI;
@@ -2685,7 +2686,7 @@ function setWorld(w) {
   const u = smokePass.march.uniforms; // dust instead of white smoke: lit by the low sun, tan ambient
   if (mars) { u.keyDir.value.copy(MARS_SUN); u.keyCol.value.setRGB(1.15, .66, .38); u.ambCol.value.setRGB(.26, .14, .08); u.ambLow.value.setRGB(.13, .065, .035); }
   else { u.keyDir.value.set(-.3, .9, .32).normalize(); u.keyCol.value.setRGB(1.75, 1.8, 1.9); u.ambCol.value.setRGB(.08, .095, .115); u.ambLow.value.setRGB(.025, .03, .035); }
-  headSpot.intensity = mars ? 40 : 160;
+  headSpot.intensity = mars ? 40 : 160; if (LITE && MARS.sun) MARS.sun.intensity = mars ? 3.4 : 0;
 }
 function updateMars() {
   if (st.world !== 'mars') return;
@@ -2699,6 +2700,10 @@ function updateMars() {
 /* ============ rocket mode: F high up. Vertical first, then a gravity turn onto Mars; on Mars it arrives tail-down for a booster-style burn,
    and F again flips back to the car for a hand-flown jet landing ============ */
 const entryEl = document.getElementById('entry');
+function premars() { // Mars built and its shaders compiled during the climb, so the entry itself has nothing heavy left to do
+  if (MARS.terrain) return; buildMars(); marsRecenter(0, Math.round(MARS_Z / 300) * 300);
+  if (LITE && MARS.sun) MARS.sun.intensity = 0; MARS.group.visible = true; try { renderer.compile(scene, camera); } catch (_) {} MARS.group.visible = st.world === 'mars';
+}
 function toggleRocket() {
   if (st.phase === 'crashed' || st.finished || MARS.done) return;
   if (st.mode === 'rocket' && st.world === 'mars' && !st.rk.land) { // diving in: F flips it tail-down for the landing burn, if there's still room
@@ -2707,7 +2712,7 @@ function toggleRocket() {
     Object.assign(st.rk, { land: true, head: H, lt: 0, tx: 0, tz: 0 }); st.yaw = yawOf(H); pop('LANDING MODE', TOUCH_UI ? 'hold BURN' : 'hold W to burn', 'cool'); hitSound(5); return; }
   if (st.mode === 'rocket') { st.mode = 'air'; st.phase = 'air'; st.levelT = 1.2; st.tricks = { z: null, x: null }; st.js = st.js || newJumpStats(); pop('CAR MODE', st.world === 'mars' ? 'land it gently' : '', 'cool'); hitSound(3); return; }
   if (st.mode === 'air' && (st.world === 'mars' || st.pos.y > 12)) {
-    camRel.copy(camPos).sub(st.pos); st.mode = 'rocket'; st.rk = { t: 0, p0: st.pos.clone(), prog: 0, back: fwdOf(st.yaw || 0).negate(), entry: 0, mars: st.world === 'mars' }; pop('ROCKET MODE', st.world === 'mars' ? '' : TOUCH_UI ? 'hold BURN' : 'hold W to burn', 'cool'); hitSound(5);
+    if (!MARS.terrain && st.world !== 'mars') setTimeout(premars, 400); camRel.copy(camPos).sub(st.pos); st.mode = 'rocket'; st.rk = { t: 0, p0: st.pos.clone(), prog: 0, back: fwdOf(st.yaw || 0).negate(), entry: 0, mars: st.world === 'mars' }; pop('ROCKET MODE', st.world === 'mars' ? '' : TOUCH_UI ? 'hold BURN' : 'hold W to burn', 'cool'); hitSound(5);
     if (snd.ctx && snd.on) { const c = snd.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(48, t); o.frequency.exponentialRampToValueAtTime(150, t + .5); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.3, t + .05); g.gain.exponentialRampToValueAtTime(.001, t + .7); o.connect(g); g.connect(snd.master); o.start(t); o.stop(t + .75); } }
 }
 const LAND_MIN = 200; // landing mode (tail down) only switches on above this height: lower down there's no room left to stop
