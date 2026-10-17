@@ -1093,13 +1093,13 @@ addEventListener('keydown', e => { if (e.target && e.target.tagName === 'INPUT')
   keys[e.code] = true; for (const k of document.querySelectorAll(`#start kbd[data-k="${e.code}"]`)) k.classList.add('down'); if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (e.code === 'KeyM') { snd.on = !snd.on; flash(snd.on ? 'Sound on' : 'Sound off'); }
   if (e.code === 'KeyH') toggleKeys();
-  if (e.code === 'KeyR') { if (st.summary) spawn(); else if (st.score > 0 && resEl.hidden && st.phase !== 'crashed') openSummary(); else spawn(); }
-  if (e.code === 'Enter' && !document.body.classList.contains('lobby')) { if (st.summary) closeSummary(); else openSummary(); }
+  if (e.code === 'KeyR' && !(st.finished && hero.state !== 'off')) { if (st.summary) spawn(); else if (st.score > 0 && resEl.hidden && st.phase !== 'crashed') openSummary(); else spawn(); }
+  if (e.code === 'Enter' && !document.body.classList.contains('lobby') && !(st.finished && hero.state !== 'off')) { if (st.summary) closeSummary(); else openSummary(); }
   if (e.code === 'KeyF' && !e.repeat) toggleRocket(); });
 addEventListener('keyup', e => { if (e.target && e.target.tagName === 'INPUT') return; keys[e.code] = false; for (const k of document.querySelectorAll(`#start kbd[data-k="${e.code}"]`)) k.classList.remove('down'); });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 for (const b of document.querySelectorAll('.touch button, .touchR')) { const k = b.dataset.k;
-  b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add('on'); if (k === 'KeyF') { toggleRocket(); return; } if (k === 'KeyR' && st.score > 0 && resEl.hidden && st.phase !== 'crashed') { openSummary(); return; } if (k === 'KeyR' || retryReady()) { spawn(); b.dataset.swallow = '1'; } else if (!st.summary) keys[k] = true; });
+  b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} b.classList.add('on'); if (k === 'KeyF') { toggleRocket(); return; } if (k === 'KeyR' && st.finished && hero.state !== 'off') return; if (k === 'KeyR' && st.score > 0 && resEl.hidden && st.phase !== 'crashed') { openSummary(); return; } if (k === 'KeyR' || retryReady()) { spawn(); b.dataset.swallow = '1'; } else if (!st.summary) keys[k] = true; });
   const up = () => { b.classList.remove('on'); b.dataset.swallow = ''; if (k !== 'KeyR') keys[k] = false; };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, up);
   b.addEventListener('touchstart', e => e.preventDefault(), { passive: false }); b.addEventListener('contextmenu', e => e.preventDefault()); }
@@ -1374,9 +1374,9 @@ function land() {
 }
 function takeOff(vel) { st.mode = 'air'; st.phase = 'air'; st.vel.copy(vel); st.js = newJumpStats(); st.tricks = { z: null, x: null }; st.popT = 0; }
 function step(dt) {
-  const finale = st.finished && hero.state !== 'off'; // the run's over and the pilot is on his way: W no longer drives
+  const finale = st.finished && hero.state !== 'off'; // the run's over and the pilot is on his way: no controls until his scene is done
   const lobby = document.body.classList.contains('lobby'); // garage up: the car waits for START
-  const thr = !lobby && !finale && !!(keys.KeyW || keys.ArrowUp && false), brk = !lobby && !!keys.KeyS, lift = !lobby && !!keys.Space,
+  const thr = !lobby && !finale && !!(keys.KeyW || keys.ArrowUp && false), brk = !lobby && !finale && !!keys.KeyS, lift = !lobby && !finale && !!keys.Space, // the pilot's scene plays out untouched: you watch it
     rollIn = 0, pitchIn = 0;
   if (st.phase === 'ready') { if (thr || lift || brk) { st.phase = 'drive'; coach.runs++; store.set('rl_runs', coach.runs); flash('Go', .6); document.getElementById('start').classList.add('off'); recStart(); } }
   if (st.phase !== 'ready' && st.phase !== 'done' && st.phase !== 'crashed' && !st.finished) { st.time += dt; st.maxV = Math.max(st.maxV || 0, st.mode === 'air' ? st.vel.length() : st.v); }
