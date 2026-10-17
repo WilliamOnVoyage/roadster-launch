@@ -56,7 +56,7 @@ canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
   -webkit-mask:radial-gradient(circle,transparent 6%,#000 55%);mask:radial-gradient(circle,transparent 6%,#000 55%)}
 #warp.on{animation:warpIn 1.45s cubic-bezier(.5,0,.9,.6) forwards}
 @keyframes warpIn{0%{opacity:0;transform:scale(.7) rotate(0)}40%{opacity:.85}100%{opacity:1;transform:scale(2.4) rotate(14deg)}}
-#entry{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:4;background:linear-gradient(180deg,#7a4128 0%,#a35a35 55%,#8c4a2b 100%);transition:opacity .9s ease-in} /* the planet's own surface tone: Mars filling the view, not a flash */
+#entry{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:4;background:radial-gradient(ellipse 70% 62% at 50% 52%,transparent 40%,rgba(255,105,35,.42) 74%,rgba(255,196,120,.9) 100%)} /* the planet's own surface tone: Mars filling the view, not a flash */
 #entry.on{opacity:1}#entry.out{opacity:0;transition:opacity 2.2s ease-out}
 #guide{position:fixed;left:50%;top:calc(58px + env(safe-area-inset-top,0px));transform:translateX(-50%);display:flex;align-items:center;gap:12px;pointer-events:none;opacity:0;transition:opacity .4s;z-index:3}
 #guide.on{opacity:1}
@@ -75,6 +75,7 @@ canvas{display:block;width:100%;height:100%;outline:none;touch-action:none}
 #lander i{display:inline-block;width:90px;height:7px;margin-left:6px;vertical-align:middle;background:linear-gradient(90deg,#ff8a4a var(--f),rgba(255,255,255,.15) var(--f));border:1px solid rgba(255,255,255,.3)}
 .touchF{top:calc(124px + env(safe-area-inset-top,0px))!important;font-size:22px!important}
 @media (max-width:640px){#lander{left:max(16px,env(safe-area-inset-left,0px));transform:none;top:calc(64px + env(safe-area-inset-top,0px));gap:12px;font-size:10px;letter-spacing:.08em}#lander b{font-size:16px;margin:0 2px}#lander i{width:52px;height:6px}} /* clear of the restart / rocket buttons on the right */
+@media (pointer:coarse) and (orientation:portrait){#guide{top:calc(205px + env(safe-area-inset-top,0px))}} /* below the HUD rows on a tall phone */
 @media (pointer:coarse){html #cue.mars{top:71%;font-size:15px;letter-spacing:.14em;white-space:normal;width:90vw;text-align:center}} /* above the thumb controls */
 #wflash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4;transition:opacity .2s}
 #wflash.on{opacity:1}#wflash.out{opacity:0;transition:opacity 1.1s ease-out}
@@ -141,6 +142,16 @@ body.lobby .hud.bl,body.lobby .hud.br{opacity:0}
 #result::before,#result::after{content:'';position:absolute;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,var(--led),transparent);box-shadow:0 0 12px var(--led)}
 #result::before{top:0}#result::after{bottom:0}
 #result[hidden]{display:none}
+#result.legend{overflow:hidden}
+#result.legend::before,#result.legend::after{background:linear-gradient(90deg,transparent,#ffd36b,transparent);box-shadow:0 0 18px #ffb84a}
+#result .rays{position:absolute;left:50%;top:42%;width:max(120vw,900px);aspect-ratio:1;transform:translate(-50%,-50%);z-index:-1;pointer-events:none;background:repeating-conic-gradient(rgba(255,196,90,.2) 0 5deg,transparent 5deg 15deg);-webkit-mask:radial-gradient(closest-side,#000,transparent 62%);mask:radial-gradient(closest-side,#000,transparent 62%);animation:rays 18s linear infinite}
+@keyframes rays{to{transform:translate(-50%,-50%) rotate(360deg)}}
+#result h2.legend{font-size:clamp(15px,2.6vw,30px);letter-spacing:.5em;padding-left:.5em;color:#fff4d6;text-shadow:0 0 16px rgba(255,190,80,.7);animation:legendUp .5s ease-out both}
+#result h2.legend span{display:block;margin-top:2px;padding:0 .14em;font-size:clamp(42px,9vw,112px);font-style:italic;letter-spacing:.1em;line-height:1.05;color:transparent;text-shadow:none;background:linear-gradient(100deg,#ff9d2e 0%,#fff6d2 18%,#ffd36b 30%,#ff7a1a 48%,#fff0b8 64%,#ffb23f 80%,#ff9d2e 100%) 0 0/260% 100%;-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 16px rgba(255,150,40,.9)) drop-shadow(0 0 46px rgba(255,90,20,.5));animation:legendSheen 2.4s linear infinite,legendSlam .7s cubic-bezier(.2,.9,.3,1.25) .15s both}
+@keyframes legendSheen{to{background-position:-260% 0}}
+@keyframes legendSlam{0%{transform:scale(2.4);opacity:0;letter-spacing:.6em}60%{opacity:1}100%{transform:scale(1);letter-spacing:.1em}}
+@keyframes legendUp{from{opacity:0;transform:translateY(10px)}}
+@media (prefers-reduced-motion:reduce){#result .rays,#result h2.legend,#result h2.legend span{animation:none}}
 #result h2{margin:0;font-family:var(--display);font-weight:800;font-size:clamp(30px,6.4vw,74px);letter-spacing:.22em;color:#f4f5f7;text-shadow:0 0 22px rgba(255,40,30,.35)}
 #result h2 span{color:var(--led);text-shadow:0 0 18px rgba(255,40,30,.9),0 0 46px rgba(255,30,20,.5)}
 #result .sub{margin-top:10px;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:rgba(255,255,255,.62)}
@@ -163,6 +174,15 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-
 .touch button.big{width:78px;height:78px;border-color:rgba(255,80,90,.8)}.touch button.wide{width:auto;height:62px;border-radius:31px}
 .touch button.on,.touchR.on{background:rgba(255,43,61,.38);border-color:var(--led)}
 #tl{left:max(16px,env(safe-area-inset-left,0px))} #tr{right:max(16px,env(safe-area-inset-right,0px));align-items:flex-end}
+.touch.rk{display:none!important}
+#rkL{left:max(16px,env(safe-area-inset-left,0px))} #rkR{right:max(16px,env(safe-area-inset-right,0px));align-items:flex-end}
+.pad{position:relative;width:150px;height:150px;border-radius:50%;border:1px solid #3a404a;background:radial-gradient(circle,rgba(127,233,255,.12),rgba(10,12,16,.55) 72%);pointer-events:auto;touch-action:none}
+.pad .knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:rgba(127,233,255,.22);border:1px solid rgba(127,233,255,.85);box-shadow:0 0 16px rgba(127,233,255,.5);pointer-events:none}
+.pad span{position:absolute;font:600 9px var(--mono);letter-spacing:.12em;color:rgba(233,237,242,.8);pointer-events:none;white-space:nowrap}
+.pad .pu{top:9px;left:50%;transform:translateX(-50%)}.pad .pd{bottom:9px;left:50%;transform:translateX(-50%)}.pad .pl{left:10px;top:50%;transform:translateY(-50%);font-size:15px}.pad .pr{right:10px;top:50%;transform:translateY(-50%);font-size:15px}
+.touch button.burn{width:100px;height:100px;font-size:15px;font-weight:700;letter-spacing:.16em;border-color:rgba(255,140,60,.95);background:rgba(255,90,30,.2);box-shadow:0 0 18px rgba(255,110,40,.35)}
+.touch button.burn.on{background:rgba(255,110,40,.6);box-shadow:0 0 26px rgba(255,120,50,.8)}
+.touchR.txt{font:700 11px var(--mono)!important;letter-spacing:.1em}
 .touchR{position:fixed;display:none;top:calc(72px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));width:44px;height:44px;font-size:20px;pointer-events:auto}
 #result .best-new{display:inline-block;margin-bottom:6px;padding:3px 10px;font:700 11px var(--mono);letter-spacing:.3em;color:#06070a;background:var(--thrust);box-shadow:0 0 18px rgba(127,233,255,.7)}
 #result .score-big{margin:4px 0 2px;font-family:var(--display);font-weight:800;font-style:italic;line-height:1;letter-spacing:.03em}
@@ -208,6 +228,7 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-
 #garage .gstat{font:600 10px var(--mono);letter-spacing:.2em;color:#ffd36b;text-transform:uppercase}#garage .gstat:empty{display:none}
 #garage .glb{font:600 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);background:transparent;border:0;cursor:pointer;padding:2px 6px}
 #garage .glb:hover{color:var(--ink)}
+body.landing .hud.tl,body.landing .hud.br{opacity:0;pointer-events:none}body.landing .hud.tl *{pointer-events:none} /* coming down on Mars: just the readouts */
 body.titleup .hud.tl,body.titleup .hud.tr{opacity:0;pointer-events:none} /* the title card owns the screen; HUD comes in with the run */
 body.titleup .hud.tl *,body.titleup .hud.tr *{pointer-events:none}
 .hud.tl,.hud.tr{transition:opacity .4s}
@@ -313,7 +334,7 @@ body.resultup #mis,body.resultup #guide,body.resultup #cue,body.resultup #pops{d
 @media (max-height:470px){#start h1{display:none}#start{padding-top:10px;padding-bottom:12px}#garage{grid-template-columns:auto auto;column-gap:14px}#garage .swatches{max-width:220px}#garage .glb{grid-column:1/-1}} /* short windows and phones held sideways */
 @media (orientation:landscape) and (max-height:500px){html #start.lobby #garage{grid-template-columns:1fr;width:min(46vw,330px)}html #start.lobby #garage .swatches{max-width:none}html #start.lobby #garage #pname{width:100%;box-sizing:border-box}html #start.lobby #startBtn{width:100%}}
 @media (pointer:coarse) and (max-height:470px){#start:not(.lobby){padding-bottom:12px}#start:not(.lobby) h1{display:block;font-size:22px}}
-@media (pointer:coarse){.br{display:none}html,body{touch-action:none}.touch{display:flex}.touchR{display:flex}.keys,#keysBtn{display:none}.bl{bottom:calc(168px + env(safe-area-inset-bottom,0px))}}
+@media (pointer:coarse){body.rk .touch:not(.rk){display:none!important}body.rk .touch.rk{display:flex!important}.br{display:none}html,body{touch-action:none}.touch{display:flex}.touchR{display:flex}.keys,#keysBtn{display:none}.bl{bottom:calc(168px + env(safe-area-inset-bottom,0px))}}
 @media (max-width:640px){#msg{white-space:normal;width:92vw;text-align:center;font-size:17px;letter-spacing:.12em;line-height:1.35}}
 @media (max-width:640px){.keys,#keysBtn{display:none}.speed{font-size:44px}.br{display:none}}
 @media (prefers-reduced-motion:reduce){#msg{transition:none}#start kbd{animation:none}}
@@ -331,9 +352,11 @@ body.resultup #mis,body.resultup #guide,body.resultup #cue,body.resultup #pops{d
   #guide{top:calc(86px + env(safe-area-inset-top,0px))}#guide b{font-size:18px}#guide .arr{width:22px;height:22px}
   #result{top:50%;padding:12px 16px}#result h2{font-size:26px}#result .score-big span{font-size:54px}#result .sub{margin-top:4px;font-size:10px}
   #result .acts{margin-top:8px}#result .lbrow{margin-top:6px}#result .by{margin-top:4px}
+  #result h2.legend{font-size:12px}#result h2.legend span{font-size:40px}
 }
 </style>
 
+<body class="lobby titleup"><!-- the garage from the first paint: no game HUD flashing behind it while the scripts load -->
 <canvas id="c" tabindex="0"></canvas>
 <div id="veil"></div>
 
@@ -366,6 +389,8 @@ body.resultup #mis,body.resultup #guide,body.resultup #cue,body.resultup #pops{d
 <div id="msg"></div>
 <div class="touch" id="tl"><div class="tpair"><button data-k="KeyA"><b>⟲</b><i>ROLL</i></button><button data-k="KeyD"><b>⟳</b><i>ROLL</i></button></div><button data-k="Space" class="wide">JETS</button></div>
 <div class="touch" id="tr"><div class="tpair"><button data-k="ArrowUp"><b>▲</b><i>FLIP</i></button><button data-k="ArrowDown"><b>▼</b><i>FLIP</i></button></div><div class="tpair low"><button data-k="KeyS">BRAKE</button><button data-k="KeyW" class="big">GO</button></div></div>
+<div class="touch rk" id="rkL"><div class="pad" id="rkPad" aria-label="Steer"><i class="knob"></i><span class="pu">NOSE UP</span><span class="pd">NOSE DOWN</span><span class="pl">◀</span><span class="pr">▶</span></div></div>
+<div class="touch rk" id="rkR"><button data-k="KeyW" class="burn">BURN</button></div>
 <button class="touchR" data-k="KeyR" aria-label="Restart">↺</button>
 <button class="touchR touchF" data-k="KeyF" aria-label="Rocket mode">🚀</button>
 <div id="cue"></div>
@@ -1078,10 +1103,18 @@ for (const b of document.querySelectorAll('.touch button, .touchR')) { const k =
   const up = () => { b.classList.remove('on'); b.dataset.swallow = ''; if (k !== 'KeyR') keys[k] = false; };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, up);
   b.addEventListener('touchstart', e => e.preventDefault(), { passive: false }); b.addEventListener('contextmenu', e => e.preventDefault()); }
+{ const pad = document.getElementById('rkPad'), knob = pad.querySelector('.knob'); let id = null; // rocket stick
+  const set = (dx, dy) => { const r = pad.clientWidth / 2 || 75, x = Math.max(-1, Math.min(1, dx / r)), y = Math.max(-1, Math.min(1, dy / r)); keys.KeyA = x < -.3; keys.KeyD = x > .3; keys.ArrowUp = y < -.3; keys.ArrowDown = y > .3; knob.style.transform = `translate(${x * r * .55}px,${y * r * .55}px)`; };
+  const at = e => { const b = pad.getBoundingClientRect(); set(e.clientX - b.left - b.width / 2, e.clientY - b.top - b.height / 2); };
+  pad.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; try { pad.setPointerCapture(id); } catch (_) {} at(e); });
+  pad.addEventListener('pointermove', e => { if (e.pointerId === id) at(e); });
+  const end = e => { if (e.pointerId !== id) return; id = null; keys.KeyA = keys.KeyD = keys.ArrowUp = keys.ArrowDown = false; knob.style.transform = ''; };
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, end);
+  pad.addEventListener('touchstart', e => e.preventDefault(), { passive: false }); }
 addEventListener('selectstart', e => { if (!(e.target && e.target.tagName === 'INPUT')) e.preventDefault(); }); addEventListener('contextmenu', e => { if (matchMedia('(pointer:coarse)').matches) e.preventDefault(); });
 // free camera: drag to orbit round the car (stays where you leave it for the run), wheel / pinch to zoom, double-click (double-tap) to reset
 let drag = null, orbitYaw = 0, orbitPitch = 0, camZoom = 1; const ptrs = new Map(); let pinch0 = 0;
-const viewReset = () => { orbitYaw = 0; orbitPitch = 0; camZoom = 1; }; const startShot = () => { viewReset(); camSnap = true; camIdle = IDLE_YAW; camIdle0 = performance.now(); }; let tap0 = [0, 0, 0]; // every run, and START, opens on the same shot
+const viewReset = () => { orbitYaw = 0; orbitPitch = 0; camZoom = 1; }; const startShot = () => { viewReset(); camSnap = true; camIdle = IDLE_YAW; camIdle0 = performance.now(); st.safeT = SAFE_S; }; let tap0 = [0, 0, 0]; // every run, and START, opens on the same shot (and with fresh spawn protection)
 canvas.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, [e.clientX, e.clientY]); drag = [e.clientX, e.clientY]; canvas.setPointerCapture(e.pointerId);
   if (e.pointerType === 'touch') { const t = performance.now(); if (ptrs.size === 1 && t - tap0[0] < 320 && Math.hypot(e.clientX - tap0[1], e.clientY - tap0[2]) < 40) viewReset(); tap0 = [t, e.clientX, e.clientY]; } // phones don't send dblclick: double-tap resets the view
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a[0] - b[0], a[1] - b[1]); } });
@@ -1108,7 +1141,7 @@ const cueEl = document.getElementById('cue'), resEl = document.getElementById('r
 const WHEEL_CONTACT = [V(-.92, .02, 1.45), V(.92, .02, 1.45), V(-.92, .02, -1.42), V(.92, .02, -1.42)];
 function spawn() {
   Object.assign(st, { mode: 'ground', phase: 'ready', v: 0, dir: -1, yaw: 0, steer: 0, rampX: 0, th: 0, time: 0, cue: false, jumps: [], js: null, cleared: false, finished: false, crashWhy: '', maxV: 0 });
-  if (st.world === 'mars') setWorld('earth'); MARS.done = false; st.rk = null; st.fuel = 100; st.entryT = 0; entryEl.className = ''; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
+  if (st.world === 'mars') setWorld('earth'); MARS.done = false; st.rk = null; st.fuel = 100; st.marsAge = 0; entryEl.style.opacity = 0; resetRings(); warpEl.className = ''; wflashEl.className = ''; marsWinEl.className = '';
   msgEl.style.opacity = 0; msgT = 0; startShot(); setHint(''); st.score = 0; st.parts = {}; st.banked = 0; st.rampDone = false; st.mdone = {}; st.finishDone = false; st.summary = false; scoreEl.textContent = '0 PTS'; popsEl.innerHTML = ''; for (const c of COILS) c.zapped = false; // a restart starts clean: no leftover banner, the standard chase view straight back behind the car (any orbit or zoom dropped)
   for (const pr of props) { if (!pr.home) pr.home = [pr.w.position.clone(), pr.w.rotation.clone()]; pr.hit = false; pr.body = null; pr.w.position.copy(pr.home[0]); pr.w.rotation.copy(pr.home[1]); pr.w.updateMatrixWorld(true); pr.box.setFromObject(pr.w); }
   heroReset(); clearSmoke(); setTimeout(missionsUI, 0); document.body.classList.remove('resultup');
@@ -1168,15 +1201,18 @@ function hitsObstacle() { // returns the line-up vehicles the car's body is touc
    two Tripo models of the same (original, visor-down) character: A hovering, B in a three-point landing.
    No cut: the car pulls up, the chase cam glides round to frame it, then he comes in out of the sky ahead of it. */
 const hero = { A: null, B: null, root: new THREE.Group(), state: 'off', t: 0, P: V(0, 0, 0), light: new THREE.PointLight(0x8fe8ff, 0, 18, 2) };
-hero.root.visible = false; hero.root.add(hero.light); hero.light.position.set(0, .2, 0); scene.add(hero.root);
+hero.root.add(hero.light); hero.light.position.set(0, .2, 0); scene.add(hero.root); // the root (and its light, at zero) stays in the scene: a light coming and going would recompile every material, a hitch the moment he appears
 function fitHeight(root, h) {
   const wrap = new THREE.Group(), spin = new THREE.Group(); spin.add(root); wrap.add(spin); wrap.updateMatrixWorld(true);
   const b = new THREE.Box3().setFromObject(wrap), sz = b.getSize(V(0, 0, 0)), k = h / sz.y; spin.scale.setScalar(k); wrap.updateMatrixWorld(true);
   const b2 = new THREE.Box3().setFromObject(wrap), c = b2.getCenter(V(0, 0, 0)); spin.position.set(-c.x, -b2.min.y, -c.z);
   root.traverse(o => { if (o.isMesh) { o.castShadow = true; if (o.material) o.material.envMapIntensity = 1.2; } }); return wrap;
 }
-carReady.then(() => loadGLB('HERO_A')).then(g => { hero.A = fitHeight(g.scene, 1.85); hero.A.rotation.y = -Math.PI / 2; hero.root.add(hero.A); }).catch(() => {});
-carReady.then(() => loadGLB('HERO_B')).then(g => { hero.B = fitHeight(g.scene, 1.25); hero.B.rotation.y = -Math.PI / 2 + .5; hero.B.visible = false; hero.root.add(hero.B); }).catch(() => {});
+const heroA = carReady.then(() => loadGLB('HERO_A')).then(g => { hero.A = fitHeight(g.scene, 1.85); hero.A.rotation.y = -Math.PI / 2; hero.A.visible = false; hero.root.add(hero.A); }).catch(() => {});
+const heroB = carReady.then(() => loadGLB('HERO_B')).then(g => { hero.B = fitHeight(g.scene, 1.25); hero.B.rotation.y = -Math.PI / 2 + .5; hero.B.visible = false; hero.root.add(hero.B); }).catch(() => {});
+Promise.all([heroA, heroB]).then(() => setTimeout(() => { // warm him up while nobody's looking: shaders compiled and textures on the GPU before his entrance
+  const parts = [hero.A, hero.B].filter(Boolean); parts.forEach(o => { o.visible = true; o.traverse(m => { if (m.isMesh) for (const mt of [].concat(m.material)) for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap']) if (mt[k]) renderer.initTexture(mt[k]); }); });
+  try { renderer.compile(scene, camera); } catch (_) {} parts.forEach(o => { o.visible = false; }); }, 500));
 const HERO_BOOTS = [V(-.14, .05, 0), V(.14, .05, 0), V(0, 1.25, .25)]; // boot soles and the back pack, in the hovering model's frame
 const HERO_FLY = 3.4; // seconds of flight
 const stopDist = v => v > 1.25 ? (v - 1.25) / 1.2 + .52 : v * v / 3; // where the retro-jets will bring the car to rest (see step)
@@ -1197,7 +1233,7 @@ function heroUpdate(dt) {
   if (hero.state === 'settle') { // slowing down: the camera is already gliding round; he launches before the car is quite still
     hero.F = fwdOf(st.yaw || 0); hero.L = latOf(hero.F); hero.P.copy(st.pos).setY(0).addScaledVector(hero.F, stopDist(st.v) + 9); if (st.v > 7) return; // the landing spot rides on the predicted stopping point
     hero.S = hero.P.clone().addScaledVector(hero.L, -hero.side * 34).addScaledVector(hero.F, 90).setY(62); hero.state = 'fly'; hero.t = 0;
-    hero.root.visible = true; hero.A.visible = true; if (hero.B) hero.B.visible = false; heroPath(0, r.position); hero.prev = r.position.clone(); return; }
+    if (hero.A) hero.A.visible = true; if (hero.B) hero.B.visible = false; heroPath(0, r.position); hero.prev = r.position.clone(); return; }
   if (hero.state === 'fly' || hero.state === 'land') headSpot.intensity += (35 - headSpot.intensity) * Math.min(1, dt * 3);
   if (hero.state === 'fly') {
     // eased flight: fast at first, braking hard on the boot thrusters over the last few metres
@@ -1246,7 +1282,7 @@ function clearSmoke() { // a restart wipes the field: sprites, jet trails, billo
   TR.age.fill(1e9); TR.n = 0; TR.head = 0; TR.geo.instanceCount = 0; nozPrev.clear();
   BILL.list = []; if (BILL.geo) BILL.geo.instanceCount = 0; VOL.list = [];
 }
-function heroReset() { headSpot.intensity = 160; hero.state = 'off'; hero.said = false; hero.root.visible = false; shockRing.visible = false; shoutEl.className = ''; }
+function heroReset() { headSpot.intensity = 160; hero.state = 'off'; hero.said = false; if (hero.A) hero.A.visible = false; if (hero.B) hero.B.visible = false; hero.light.intensity = 0; shockRing.visible = false; shoutEl.className = ''; }
 
 /* ============ rigid bodies: crashed car and thrown line-up vehicles ============
    a box (half extents hx, hy, hz; origin at the bottom centre like the models) with impulse contacts at its 8 corners
@@ -1284,7 +1320,7 @@ class Body {
     const wl = this.W.length(); if (wl > 1e-6) this.q.premultiply(tmpQ.setFromAxisAngle(this.W.clone().divideScalar(wl), wl * dt)).normalize();
     let hit = 0;
     for (let i = 0; i < 8; i++) { const c = V(i & 1 ? this.h.x : -this.h.x, i & 2 ? 2 * this.h.y : 0, i & 4 ? this.h.z : -this.h.z).add(V(0, -this.h.y, 0)).applyQuaternion(this.q).add(this.com);
-      const gy = groundY(c.x, c.z); if (c.y < gy) hit = Math.max(hit, this.contact(c, Y, gy - c.y));
+      const gy = floorAt(c.x, c.z); if (c.y < gy) hit = Math.max(hit, this.contact(c, Y, gy - c.y));
       const dc = deckContact(c); if (dc) hit = Math.max(hit, this.contact(c, dc.n, dc.depth)); }
     if (hit > 0) { const vl = this.v.length(); if (vl < 1.2 && this.W.length() < 1.5) { this.v.multiplyScalar(Math.exp(-6 * dt)); this.W.multiplyScalar(Math.exp(-6 * dt)); } if (onHit) onHit(hit); }
   }
@@ -1313,14 +1349,17 @@ function crash(why) {
   st.jumps.push(wasAir ? { ...st.js, grade: 'CRASH' } : { t: 0, maxH: 0, grade: 'CRASH' }); st.crashT = 0;
 }
 function land() {
-  const up = V(0, 1, 0).applyQuaternion(st.q), f = V(0, 0, -1).applyQuaternion(st.q), vy = -st.vel.y, js = st.js;
-  st.pos.y = 0;
-  if (up.y < .866) return crash(up.y < 0 ? 'landed on its roof' : up.y < .5 ? 'landed on its side' : `touched down ${Math.round(Math.acos(up.y) * 57.3)}° off level`);
+  const up = V(0, 1, 0).applyQuaternion(st.q), f = V(0, 0, -1).applyQuaternion(st.q), js = st.js, mars = st.world === 'mars';
+  const gn = mars ? marsSurf(st.pos, fwdOf(yawOf(V(f.x, 0, f.z).lengthSq() > .01 ? V(f.x, 0, f.z).normalize() : fwdOf(st.yaw || 0)))) : null, nrm = gn ? gn.n : Y; // Mars: the slope under you
+  const vy = -st.vel.dot(nrm), upN = up.dot(nrm); // impact speed and attitude measured against the ground's normal
+  st.pos.y = gn ? gn.h : 0;
+  if (upN < .866) return crash(upN < 0 ? 'landed on its roof' : upN < .5 ? 'landed on its side' : `touched down ${Math.round(Math.acos(upN) * 57.3)}° off level`);
   const fh = V(f.x, 0, f.z).normalize(), vh = V(st.vel.x, 0, st.vel.z), hs = vh.length();
   if (hs > 8 && Math.abs(fh.dot(vh) / hs) < .5) return crash('landed sideways'); // skidding in more than 60 degrees off the nose
   if (vy > (st.world === 'mars' ? 9 : 13)) return crash(st.world === 'mars' ? `hit Mars at ${Math.round(vy * 3.6)} km/h` : `hit the ground at ${Math.round(vy * 3.6)} km/h`);
   st.touchVy = vy;
   st.yaw = yawOf(fh); st.dir = fh.z < 0 ? -1 : 1; st.v = vh.dot(fh); st.q.copy(yawQuat(st.yaw)); st.w.set(0, 0, 0); // touching down travelling backwards keeps rolling backwards
+  if (gn) { const F = fwdOf(st.yaw), Fs = F.clone().addScaledVector(nrm, -F.dot(nrm)).normalize(); st.v = st.vel.dot(Fs); st.q.copy(basisQuat(Fs, nrm)); st.gvel = Fs.clone().multiplyScalar(st.v); st.groundT = 0; } // on the slope, carrying the speed along it
   st.mode = 'ground'; st.phase = 'drive'; if (coach.last === 'roll' || coach.last === 'spin' || coach.last === 'nose') { coach.last = ''; store.set('rl_lastCrash', ''); } landFx(); st.shake = Math.min(1.5, .3 + vy / 8);
   const clean = vy < 7 && up.y > .96, rolls = Math.round(js.roll / (2 * Math.PI) * 2) / 2, flips = Math.round(js.pitch / (2 * Math.PI) * 2) / 2;
   const grade = clean ? 'PERFECT' : 'HARD';
@@ -1342,6 +1381,8 @@ function step(dt) {
   if (st.phase === 'ready') { if (thr || lift || brk) { st.phase = 'drive'; coach.runs++; store.set('rl_runs', coach.runs); flash('Go', .6); document.getElementById('start').classList.add('off'); recStart(); } }
   if (st.phase !== 'ready' && st.phase !== 'done' && st.phase !== 'crashed' && !st.finished) { st.time += dt; st.maxV = Math.max(st.maxV || 0, st.mode === 'air' ? st.vel.length() : st.v); }
   let jets = [0, 0, 0, 0], side = [0, 0], boost = false;
+  if (st.world === 'mars') { st.marsAge = (st.marsAge || 0) + dt; if (st.marsAge < 4.5 && (st.mode === 'air' || st.mode === 'rocket')) { // the thick upper air: drag pulls you down to ~80 m/s, then thins out
+    const k = 1 - smooth(clamp01((st.marsAge - 2.5) / 2)), e = Math.exp(-.8 * k * dt); st.vel.x *= e; st.vel.z *= e; st.vel.y += (-80 - st.vel.y) * (1 - Math.exp(-1.1 * k * dt)); st.shake = Math.max(st.shake, .7 * k); } }
   if (st.mode === 'ground' && st.phase !== 'ready') {
     // S brakes; held at a standstill (a quarter second, so braking to a stop doesn't back you up) it engages reverse. W stops a reversing car first.
     st.revT = brk && st.v <= .05 && !st.finished ? (st.revT || 0) + dt : 0;
@@ -1358,6 +1399,7 @@ function step(dt) {
     if (st.world !== 'mars' && prev.z > RAMP.E.z && st.pos.z <= RAMP.E.z && Math.abs(st.pos.x) < RAMP.half - .2 && st.v > 0) {
       if (-F.z < .8) return crash('hit the ramp at an angle'); // the deck lines you up, but not from 37 degrees off
       st.mode = 'ramp'; st.phase = 'ramp'; st.th = RAMP.E.z - st.pos.z; st.rampX = st.pos.x; st.yaw = 0; st.pos.copy(rampP(st.th)).addScaledVector(rampSide, st.rampX); }
+    else if (st.world === 'mars') marsGround(prev, F, dt);
     else earthWalls(prev, dt);
     if (st.mode === 'crashed') return;
     if (lift && st.mode === 'ground') { jets = [1, 1, 1, 1]; takeOff(V(0, .5, 0).addScaledVector(F, st.v)); st.popT = .3; }
@@ -1379,6 +1421,11 @@ function step(dt) {
   } else if (st.mode === 'rocket') {
     const R = st.rk; R.t += dt; const space = st.world === 'mars' ? 0 : smooth(clamp01((st.pos.y - 150) / 450)); // above ~600 m it's space: no gravity, no air
     if (R.t < .6 && !R.mars) { const ub = R.back.clone().addScaledVector(Y, -R.back.dot(Y)).normalize(); st.q.slerp(basisQuat(Y, ub.lengthSq() > .1 ? ub : V(0, 0, -1)), Math.min(1, dt * 5)); } // swing nose-up first
+    else if (R.land) { // landing mode: tail straight down (a booster coming home); up/down and A/D tilt it a little, so the burn also steers you
+      const H = R.head, Rt = H.clone().cross(Y), tx = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0), tz = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+      R.tx += (tx * .4 - R.tx) * Math.min(1, dt * 3); R.tz += (tz * .4 - R.tz) * Math.min(1, dt * 3); R.lt += dt;
+      const noseT = Y.clone().addScaledVector(H, R.tx).addScaledVector(Rt, R.tz).normalize(), roof = H.clone().negate().addScaledVector(noseT, H.dot(noseT)).normalize();
+      st.q.slerp(basisQuat(noseT, roof), Math.min(1, dt * (R.lt < 1.5 ? 2.4 : 7))); }
     else { // the pilot aims: up/down pitch the nose, A/D or left/right yaw it
       const pIn = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0), /* up raises the nose */ yIn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
       R.pr = (R.pr || 0) + (pIn * 1.25 - (R.pr || 0)) * Math.min(1, dt * 6); R.yr = (R.yr || 0) + (yIn * 1.25 - (R.yr || 0)) * Math.min(1, dt * 6);
@@ -1390,7 +1437,7 @@ function step(dt) {
       if (nx) { const rel = nx.c.clone().sub(st.pos), ahead = rel.dot(nx.n), lat = rel.addScaledVector(nx.n, -ahead), ll = lat.length(); const sp = st.vel.length(); if (ahead > 0 && ahead < 170 && ll < nx.r * 3 && sp > 5 && st.vel.dot(nx.n) > 0) { // bend the flight path (not a shove) towards the gate's centre: no overshoot
           const k = Math.min(1, dt * 2.6 * (1 - ll / (nx.r * 3)) + dt * .6); st.vel.normalize().lerp(nx.c.clone().sub(st.pos).normalize(), k).normalize().multiplyScalar(sp); } } }
     st.pos.addScaledVector(st.vel, dt); st.w.set(0, 0, 0); if (st.js) st.js.t += dt;
-    const gy = st.world === 'mars' ? 0 : groundY(st.pos.x, st.pos.z); if (st.pos.y <= gy + .3 && st.vel.y < 0) { st.pos.y = gy; crash(st.world === 'mars' ? 'came down tail-first' : 'fell out of the sky'); }
+    const gy = floorAt(st.pos.x, st.pos.z); if (st.pos.y <= gy + .3 && st.vel.y < 0) { st.pos.y = gy; crash(st.world !== 'mars' ? 'fell out of the sky' : R.land ? 'came down tail-first' : `hit Mars at ${Math.round(st.vel.length() * 3.6)} km/h`); }
   } else if (st.mode === 'air') {
     const up = V(0, 1, 0).applyQuaternion(st.q), fwd = V(0, 0, -1).applyQuaternion(st.q), js = st.js;
     const acc = V(0, -G, 0);
@@ -1441,6 +1488,8 @@ function step(dt) {
     let rampHit = false; if (js.t > .12) for (const p of carPts()) if (deckContact(p)) { rampHit = true; break; }
     const hit = hitsObstacle(); if (hit.length) { smash(hit); st.vel.multiplyScalar(.6); crash(st.vel.y < -2 ? 'came down on the line-up' : 'flew into the line-up'); }
     else if (rampHit) crash('hit the ramp');
+    else if (st.world === 'mars') { const gH = marsFloor(st.pos.x, st.pos.z), what = st.pos.y < gH + 4 ? marsBlocked(st.pos, fwdOf(st.yaw || 0)) : '';
+      if (what) { st.vel.multiplyScalar(.5); crash('flew into ' + what); } else if (st.pos.y <= gH) land(); } // any contact with the ground is a landing: land() judges it against the slope
     else if (st.pos.y <= 0 && st.vel.y <= 0) land();
     else if (st.pos.y < 0) st.pos.y = 0;
   } else if (st.mode === 'crashed') {
@@ -1451,9 +1500,8 @@ function step(dt) {
   if (jets.some(x => x)) groundWash(Math.max(...jets) * .9);
   if (boost) { emitRear(st.mode === 'ramp' ? .25 : .9); st.shake = Math.max(st.shake, .25); }
   if (st.mode === 'ground' && thr && st.v < 14 && st.v > .1) for (const w of WHEEL_CONTACT.slice(0, 2)) if (rnd() < .6) puff(w.clone().add(st.pos).add(V(0, .3, 0)), V((rnd() - .5) * 2, .8, 4 + rnd() * 3), .5, 2.6, 0xc4c9d1, .5, 3);
-  if (st.world !== 'mars' && (st.mode === 'air' || st.mode === 'rocket') && !st.entryT && st.pos.distanceTo(MARS_C) < MARS_R * 1.1) { st.entryT = 1e-6; entryEl.className = 'on'; } // into Mars' air
-  if (st.entryT) { st.entryT += dt; if (st.entryT > .9 && st.world !== 'mars') { arriveMars(); entryEl.className = 'out'; st.entryT = 0; } }
-  bumpOthers(dt); showMyGhost();
+  if (st.world !== 'mars' && (st.mode === 'air' || st.mode === 'rocket') && st.pos.distanceTo(MARS_C) < MARS_R * 1.1) arriveMars(); // into Mars' air: straight on, no cut
+  bumpOthers(dt);
   updateHints();
   updateJets(dt, jets, side[0], side[1]);
   for (const g of liftGlow) { g.material.opacity += (jetMat.opacity - g.material.opacity) * Math.min(1, dt * 14); g.scale.setScalar(.8 + rnd() * .4 * g.material.opacity); }
@@ -1507,8 +1555,7 @@ function dashFrame() {} // the share image is now a staged poster (renderPoster)
    guard and Earth). Rendered once, at 1200x675, right before a normal frame so nothing flickers; then the run's numbers on top */
 function renderPoster(card) {
   DASH.want = null; const W = 1200, H = 675, mars = st.world === 'mars'; if (!mars && !SKY.planet) buildPlanet();
-  const sv = { pos: camera.position.clone(), q: camera.quaternion.clone(), up: camera.up.clone(), fov: camera.fov, near: camera.near, cp: car.position.clone(), cq: car.quaternion.clone(), vis: car.visible, ghost: myGhost };
-  if (myGhost) { myGhost = true; body.traverse(o => { if (o.isMesh) { o.material.opacity = 1; o.material.transparent = !!o.material.userData.wasT; o.material.depthWrite = true; } }); }
+  const sv = { pos: camera.position.clone(), q: camera.quaternion.clone(), up: camera.up.clone(), fov: camera.fov, near: camera.near, cp: car.position.clone(), cq: car.quaternion.clone(), vis: car.visible };
   const P = mars ? V(0, 0, RWY.z0 + 230) : V(0, 0, 93), sky = mars ? (MARS.earth ? MARS.earth.userData.dir.clone() : V(-.45, .33, .83)) : MARS_DIR.clone();
   const skyH = V(sky.x, 0, sky.z).normalize(), side = V(-skyH.z, 0, skyH.x);
   const F = skyH.clone().applyAxisAngle(Y, Math.PI * .38); // the car side-on to the camera (its painted flank), nose across the frame
@@ -1528,7 +1575,7 @@ function renderPoster(card) {
   renderer.setSize(W, H, false); composer.setSize(W, H); composer.render();
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'); c.drawImage(canvas, 0, 0, W, H);
   car.position.copy(sv.cp); car.quaternion.copy(sv.cq); car.visible = sv.vis; camera.position.copy(sv.pos); camera.quaternion.copy(sv.q); camera.up.copy(sv.up); camera.fov = sv.fov; camera.near = sv.near;
-  if (sv.ghost) { myGhost = false; showMyGhost(); } resize();
+  resize();
   posterText(c, W, H, card); watermark(c, W, H); cv.toBlob(b => { DASH.blob = b; }, 'image/png');
 }
 function posterText(c, W, H, card) { // title, the big score, the run in numbers and the missions it ticked off, on a dark band at the left
@@ -1583,8 +1630,10 @@ const CRASH_TIP = {
 function setHint(t, opt = false) { if (t === coach.shown) return; coach.shown = t; cueEl.textContent = t; cueEl.className = t ? 'on' + (opt === true ? ' opt' : opt ? ' ' + opt : '') : ''; }
 function updateHints() {
   const fresh = coach.runs < 3, again = k => fresh || coach.last === k; let t = '';
-  if (st.mode === 'rocket' && st.world !== 'mars') { setHint(st.rk && st.rk.t < 4 ? (TOUCH_UI ? 'STEER: ⟲ ⟳  ▲ ▼ · HOLD GO' : 'STEER: A/D  ↑/↓ · HOLD W') : '', 'mars'); return; }
-  if (st.mode === 'rocket' && st.world === 'mars') { setHint(st.fuel <= 0 ? 'OUT OF FUEL' : st.pos.y > 140 ? 'BURN TO SLOW DOWN' : TOUCH_UI ? 'TAP 🚀 FOR CAR MODE' : 'F → CAR MODE', 'mars'); return; }
+  if (st.mode === 'rocket' && st.world !== 'mars') { setHint(st.rk && st.rk.t < 4 ? (TOUCH_UI ? 'STICK TO STEER · HOLD BURN' : 'STEER: A/D  ↑/↓ · HOLD W') : '', 'mars'); return; }
+  if (st.mode === 'rocket' && st.world === 'mars') { const alt = st.pos.y - marsFloor(st.pos.x, st.pos.z);
+    if (!st.rk.land) { setHint(alt > LAND_MIN ? (TOUCH_UI ? 'TAP LAND · LANDING MODE' : 'F → LANDING MODE') : 'TOO LOW · PULL UP', 'mars'); return; }
+    setHint(st.fuel <= 0 ? 'OUT OF FUEL' : alt > 140 ? (TOUCH_UI ? 'HOLD BURN TO SLOW DOWN' : 'HOLD W · BURN TO SLOW DOWN') : TOUCH_UI ? 'TAP CAR · THEN JETS' : 'F → CAR MODE', 'mars'); return; }
   if (st.mode === 'air' && st.world === 'mars' && !MARS.done) { setHint(st.fuel <= 0 ? 'OUT OF FUEL' : 'LAND IT SOFTLY', 'mars'); return; }
   if (st.mode === 'air' && st.world !== 'mars' && st.pos.y > 12 && st.phase !== 'crashed') { setHint(TOUCH_UI ? 'TAP 🚀 ROCKET MODE' : 'F → ROCKET MODE', 'mars'); return; }
   if (st.mode === 'air' && st.js && st.phase !== 'crashed' && !st.finished) {
@@ -1746,24 +1795,22 @@ function netMsg(m) {
 const qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
 /* ============ online bumps: every client resolves its own car against everyone else's (people and AI), equal masses.
    Both sides feel it because both clients do the same. A head-on hit above ~110 km/h closing speed is a crash.
-   First 3 s after a spawn: a ghost (no hits) so the start grid doesn't pile up ============ */
+   For 3 s after a spawn you're protected: cars still push apart, but nothing can shove or crash you. Nothing turns see-through ============ */
 const BUMP = { cool: 0 }, bA = V(0, 0, 0), bB = V(0, 0, 0), bN = V(0, 0, 0);
 function carSpheres(pos, q, out) { const f = V(0, 0, -1).applyQuaternion(q), u = V(0, 1, 0).applyQuaternion(q), c = pos.clone().addScaledVector(u, .6); out[0] = c.clone().addScaledVector(f, 1.25); out[1] = c.clone().addScaledVector(f, -1.25); return out; }
-const ghostT = () => GAR.mode === 'online' && (st.phase === 'ready' || ((st.time || 0) < 2 && st.phase !== 'crashed')) ? 1 : 0;
-let myGhost = false;
-function showMyGhost() { const on = ghostT() > 0 && !document.body.classList.contains('lobby'); if (on === myGhost) return; myGhost = on; body.traverse(o => { if (!o.isMesh) return; const m = o.material; if (m.userData.wasT === undefined) m.userData.wasT = m.transparent; m.transparent = on || m.userData.wasT; m.opacity = on ? .45 : 1; m.depthWrite = !on; m.needsUpdate = true; }); }
+const SAFE_S = 3, ghostT = () => GAR.mode === 'online' && st.safeT > 0 && st.phase !== 'crashed' ? 1 : 0; // spawn protection: the first 3 s after a spawn, then it lifts by itself (moving or not)
 function bumpOthers(dt) {
-  if (GAR.mode !== 'online' || ghostT() || !['ground', 'air', 'rocket'].includes(st.mode)) return; BUMP.cool -= dt;
+  st.safeT = Math.max(0, (st.safeT || 0) - dt); if (GAR.mode !== 'online' || !['ground', 'air', 'rocket'].includes(st.mode)) return; BUMP.cool -= dt; const safe = ghostT() > 0;
   const myW = st.world === 'mars' ? 1 : 0, mine = carSpheres(st.pos, st.q, []), R = 1.15;
   for (const O of [...NET.peers.values(), ...AI.list]) {
-    if (!O.g.visible || !O.model || O.world !== myW || O.g.position.distanceToSquared(st.pos) > 64 || (O.isAI && performance.now() - O.t0 < 2000)) continue;
+    if (!O.g.visible || !O.model || O.world !== myW || O.g.position.distanceToSquared(st.pos) > 64) continue;
     const theirs = carSpheres(O.g.position, O.g.quaternion, []); let best = null, depth = 0;
     for (const a of mine) for (const b of theirs) { const d = a.distanceTo(b); if (d < 2 * R && 2 * R - d > depth) { depth = 2 * R - d; best = [a, b]; } }
     if (!best) continue;
     bN.subVectors(best[0], best[1]); if (st.mode === 'ground') bN.y = 0; if (bN.lengthSq() < 1e-6) bN.set(Math.random() - .5, 0, Math.random() - .5); bN.normalize();
     const vMe = st.mode === 'ground' ? fwdOf(st.yaw || 0).multiplyScalar(st.v) : st.vel.clone(), vRel = vMe.clone().sub(O.vel || V(0, 0, 0)), vn = vRel.dot(bN);
     st.pos.addScaledVector(bN, depth * .55); // push apart (they push themselves the other half on their side)
-    if (vn >= 0) continue; // already separating
+    if (vn >= 0 || safe || (O.isAI && performance.now() - O.t0 < 2000)) continue; // already separating, or a fresh start (yours, or an AI's): just slide apart
     const closing = -vn; if (closing > 30 && st.mode !== 'rocket' && !O.isAI) { crash('collided with ' + O.cfg.name); bumpFx(best[0], closing); return; }
     const J = bN.clone().multiplyScalar(Math.min(12, -(1 + .45) * (O.isAI ? .7 : .5) * vn)); /* capped: a shove, never a cannon shot */ // people: equal masses (they get the other half on their side); AI replays don't yield, so you bounce off them
     if (st.mode === 'ground') { const F = fwdOf(st.yaw || 0), L = latOf(F); st.v += J.dot(F); const side = J.dot(L);
@@ -1781,7 +1828,7 @@ function bumpFx(at, k) {
 
 /* ============ AI drivers: when a room is quiet, AI Roadsters replay real recorded runs (game/ai.js) so the field never feels empty.
    The ONLINE count only ever counts real people ============ */
-const AI = { list: [], runs: null, loading: false, MIN_CARS: 10 }; // a quiet room fills up to ten cars on the field
+const AI = { list: [], runs: null, loading: false, MIN_CARS: 3 }; // alone in a room you get two AI drivers; they make way as people join
 const AI_NAMES = ['NEONRIDER', 'MARSBOUND', 'KICKFLIP', 'ORBITAL', 'STARMAN', 'REDLINE', 'HYPERDRIVE', 'LUNA', 'VOLTAGE', 'DRIFTKING', 'APOLLO', 'NOVA', 'GLITCH', 'TURBO', 'COMET'];
 function aiLivery(seed) { // a quick procedural paint job so the AI cars don't all look alike
   const c = document.createElement('canvas'); c.width = 1150; c.height = 250; const g = c.getContext('2d'), R = k => mHash(seed, k, 77), pal = PCOLS.slice(2, 11), col = k => pal[Math.floor(R(k) * pal.length)];
@@ -1798,10 +1845,9 @@ function aiSpawn() {
   const cfg = { car: 0, color: SWATCH[Math.floor(Math.random() * SWATCH.length)], name: names[Math.floor(Math.random() * names.length)] || 'AI', artTex: aiLivery(seed) };
   const g = new THREE.Group(); g.visible = false; scene.add(g); const label = labelSprite(cfg.name); label.position.set(0, 2.3, 0); g.add(label);
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xffb070, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); glow.position.set(0, .5, 2.9); glow.scale.setScalar(2.2); g.add(glow);
-  const a = { isAI: true, cfg, g, glow, model: null, run: null, t0: performance.now() + 1500 + Math.random() * 9000, ghost: false }; AI.list.push(a); netStatus(); return a;
+  const a = { isAI: true, cfg, g, glow, model: null, run: null, t0: performance.now() + 1500 + Math.random() * 9000 }; AI.list.push(a); netStatus(); return a;
 }
 function aiRemove(a) { scene.remove(a.g); AI.list.splice(AI.list.indexOf(a), 1); netStatus(); }
-function ghostFade(P, near) { if (!P.model || near === P.ghost) return; P.ghost = near; P.model.traverse(o => { if (!o.isMesh) return; const m = o.material; if (m.userData.wasT === undefined) m.userData.wasT = m.transparent; m.transparent = near || m.userData.wasT; m.opacity = near ? .38 : 1; m.depthWrite = !near; m.needsUpdate = true; }); }
 function aiTick(now) {
   const want = GAR.mode === 'online' && NET.open ? Math.max(0, AI.MIN_CARS - (NET.peers.size + 1)) : 0;
   if (want && !AI.runs) { if (!AI.loading && !window.AI_RUNS) { AI.loading = true; const sc = document.createElement('script'); sc.src = 'ai.js'; sc.onload = () => { AI.runs = window.AI_RUNS.map(r => ({ k: r.k, f: aiDecode(r.d) })); }; document.head.appendChild(sc); } else if (window.AI_RUNS) AI.runs = window.AI_RUNS.map(r => ({ k: r.k, f: aiDecode(r.d) })); return; }
@@ -1816,7 +1862,7 @@ function aiTick(now) {
     const A = F[i], B = F[i + 1], u = x - i; a.g.position.set(A[0] + (B[0] - A[0]) * u, A[1] + (B[1] - A[1]) * u, A[2] + (B[2] - A[2]) * u);
     qa.set(A[3], A[4], A[5], A[6]).normalize(); qb.set(B[3], B[4], B[5], B[6]).normalize(); a.g.quaternion.copy(qa.slerp(qb, u));
     a.world = B[7]; a.vel = V(B[0] - A[0], B[1] - A[1], B[2] - A[2]).multiplyScalar(10);
-    a.g.visible = B[7] === myW; a.glow.material.opacity += ((B[8] & 1 ? .8 : 0) - a.glow.material.opacity) * .2; ghostFade(a, (ghostT() > 0 && a.g.position.distanceTo(st.pos) < 9) || now - a.t0 < 2000);
+    a.g.visible = B[7] === myW; a.glow.material.opacity += ((B[8] & 1 ? .8 : 0) - a.glow.material.opacity) * .2;
   }
 }
 
@@ -1835,7 +1881,6 @@ function netTick(now) {
     qa.set(...a.q).normalize(); qb.set(...b.q).normalize(); P.g.quaternion.copy(qa.slerp(qb, u));
     P.world = b.w; const gap = B.length > 1 ? b.t - B[B.length - 2].t : 0; P.vel = B.length > 1 && gap > 30 && gap < 500 ? V(b.p[0] - B[B.length - 2].p[0], b.p[1] - B[B.length - 2].p[1], b.p[2] - B[B.length - 2].p[2]).divideScalar(gap / 1000).clampLength(0, 90) : V(0, 0, 0);
     P.g.visible = b.w === myW && now - b.t < 5000;
-    ghostFade(P, ghostT() > 0 && P.g.position.distanceTo(st.pos) < 9); // see-through only while you're spawn-protected
   }
 }
 /* ============ leaderboard: no accounts. Finish a run with points, type a name (or keep your garage name), one tap and you're on it ============ */
@@ -2003,13 +2048,14 @@ function showResult() {
   msgEl.style.opacity = 0; msgT = 0; popsEl.innerHTML = ''; document.getElementById('start').classList.add('off'); // the result band replaces the crash / finish banner and the title card
   const score = st.score || 0, prevBest = store.get('rl_bestScore', 0); if (score > prevBest) store.set('rl_bestScore', score);
   let tip = '', best = store.get('rl_best', 0), badge = score > prevBest && prevBest > 0 ? '<div class="best-new">NEW BEST</div>' : '';
-  if (MARS.done && st.world === 'mars') h = 'LANDED ON <span>MARS</span>';
+  const legend = MISSIONS.filter(m => !m.soon).every(misDone); // every mission in one run: the big one
+  if (st.cleared && (!best || st.time < best)) { best = st.time; store.set('rl_best', best); }
+  if (legend) h = 'ALL MISSIONS <span>COMPLETE</span>';
   else if (st.phase === 'crashed') { h = '<span>CRASHED</span>'; tip = CRASH_TIP[CRASH_KIND(st.crashWhy)]; }
-  else if (st.cleared) { h = 'LAUNCH <span>COMPLETE</span>';
-    if (!best || st.time < best) { best = st.time; store.set('rl_best', best); } }
-  else { h = 'YOUR <span>RUN</span>'; }
+  else h = 'YOUR <span>RUN</span>';
+  resEl.classList.toggle('legend', legend); if (legend) { cheer(0, true); cheer(1, true); hitSound(6); }
   const canRec = !!REC.r && !st.summary; // the replay is only cut when the run ends
-  resEl.innerHTML = `${badge}<h2>${h}</h2><div class="score-big"><span>0</span><small>PTS</small></div>${score > 0 ? '<div class="lbrow"><input maxlength="28" placeholder="YOUR NAME" autocomplete="off" spellcheck="false" enterkeyhint="send"><button type="button">Add to leaderboard</button></div>' : ''}${tip ? `<div class="tip">${tip}</div>` : ''}<div class="acts">${st.summary ? '<button class="keep" type="button">▶ Keep driving</button>' : ''}<button class="again" type="button">↺ Run it again</button><button class="share" data-share="x" type="button">Share on 𝕏</button><button class="share" data-share="ig" type="button">Instagram</button>${canRec ? '<button id="dl" data-rec="dl" type="button" disabled>Saving replay…</button>' : ''}</div><a class="by" href="https://x.com/nathangu76" target="_blank" rel="noopener">Made by @nathangu76</a>`;
+  resEl.innerHTML = `${legend ? '<i class="rays"></i>' : ''}${badge}<h2${legend ? ' class="legend"' : ''}>${h}</h2><div class="score-big"><span>0</span><small>PTS</small></div>${score > 0 ? '<div class="lbrow"><input maxlength="28" placeholder="YOUR NAME" autocomplete="off" spellcheck="false" enterkeyhint="send"><button type="button">Add to leaderboard</button></div>' : ''}${tip ? `<div class="tip">${tip}</div>` : ''}<div class="acts">${st.summary ? '<button class="keep" type="button">▶ Keep driving</button>' : ''}<button class="again" type="button">↺ Run it again</button><button class="share" data-share="x" type="button">Share on 𝕏</button><button class="share" data-share="ig" type="button">Instagram</button>${canRec ? '<button id="dl" data-rec="dl" type="button" disabled>Saving replay…</button>' : ''}</div><a class="by" href="https://x.com/nathangu76" target="_blank" rel="noopener">Made by @nathangu76</a>`;
   resEl.hidden = false; document.body.classList.add('resultup'); countUp(resEl.querySelector('.score-big'), score); if (score > 0) lbResultRow(score); const ag = resEl.querySelector('.again'); if (ag) ag.onclick = () => spawn(); const kp = resEl.querySelector('.keep'); if (kp) kp.onclick = closeSummary;
   DASH.blob = null; DASH.want = { head: h.replace(/<[^>]+>/g, ''), score: score.toLocaleString('en-US'), lines: [runStats(rolls, flips).join('  ·  ')], missions: MISSIONS.filter(m => !m.soon && misDone(m)).map(m => m.name.toUpperCase()), name: (GAR.name || '').toUpperCase() }; // the share poster
   const text = shareText(rolls, flips); resEl.querySelector('[data-share="x"]').onclick = () => shareX(text);
@@ -2253,13 +2299,13 @@ function updateCamera(dt) {
     const toCar = C.clone().sub(target).setY(0).normalize(), right = V(-toCar.z, 0, toCar.x);
     look = C.clone().add(V(0, portrait ? 2.6 : .7, 0)).addScaledVector(right, portrait ? 0 : -2.1); // car to the right of the panel (or under it on a tall phone)
     k = 1 - Math.exp(-dt * 3); headSpot.intensity = 0; }
-  else if (st.world === 'mars' && (st.mode === 'rocket' || st.mode === 'air') && !MARS.done) { camera.up.copy(Y); // lander view: high behind at ~35 degrees, car mid-frame, the ground and runway below in sight
+  else if (st.world === 'mars' && (st.mode === 'air' || (st.mode === 'rocket' && st.rk && st.rk.land)) && !MARS.done) { camera.up.copy(Y); // lander view: high behind at ~35 degrees, car mid-frame, the ground and runway below in sight
     const alt = Math.max(0, st.pos.y), F = fwdOf(st.yaw || 0), back = F.clone().negate(), lowK = smooth(clamp01(1 - alt / 60)); // levels out near the ground
     const want = back.multiplyScalar((12 + 2 * (1 - lowK)) * camZoom).add(V(0, (10 - 6 * lowK) * camZoom, 0)).applyAxisAngle(Y, orbitYaw);
     camRel.lerp(want, 1 - Math.exp(-dt * 4)); target = st.pos.clone().add(camRel); look = st.pos.clone().add(V(0, -1.2, 0)).addScaledVector(F, 2); // the car at the centre, the ground opening out below and ahead
     camPos.copy(target); camLook.lerp(look, 1 - Math.exp(-dt * 8)); }
   else if (st.mode === 'rocket' && st.rk) { camera.up.copy(Y); const nose = V(0, 0, -1).applyQuaternion(st.q);
-    if (st.world !== 'mars') { // flight-sim chase cam: locked to the car (no lag at 250 m/s), only the offset swings smoothly, the car sits just below centre
+    if (st.world !== 'mars' || !st.rk.land) { // flight-sim chase cam (also diving into Mars): locked to the car (no lag at 250 m/s), only the offset swings smoothly, the car sits just below centre
       const bu = V(0, 1, 0).applyQuaternion(st.q); camUp.lerp(bu, 1 - Math.exp(-dt * 5)).normalize(); camera.up.copy(camUp);
       const want = nose.clone().multiplyScalar(-9 * camZoom).addScaledVector(bu, 2.4 * camZoom), latA = nose.clone().cross(bu).normalize();
       want.applyAxisAngle(bu, orbitYaw).applyAxisAngle(latA, -orbitPitch * .8); camRel.lerp(want, 1 - Math.exp(-dt * 9)); // drag to look round the car, as on the ground
@@ -2355,8 +2401,8 @@ function updateSky(dt, t) {
   const onScreen = tmpMars.z < 0 && (() => { const v = tmpMars.clone().applyMatrix4(camera.projectionMatrix); return Math.abs(v.x) < .92 && Math.abs(v.y) < .92; })();
   const showGuide = showGuide0 || (rocketing && !onScreen); guideEl.querySelector('b').textContent = rocketing ? `MARS ${(Math.max(0, st.pos.distanceTo(MARS_C) - MARS_R) / 1000).toFixed(1)} KM` : 'TRY FLYING TO MARS!!!';
   guideEl.classList.toggle('on', showGuide); if (showGuide) { const ax = tmpMars.x, ay = tmpMars.z > 0 && Math.hypot(tmpMars.x, tmpMars.y) < 50 ? -1 : tmpMars.y; guideEl.style.setProperty('--rot', Math.atan2(ax, ay) + 'rad'); }
-  const show = st.world === 'mars' && (st.mode === 'air' || st.mode === 'rocket') && !MARS.done; landerEl.classList.toggle('on', show);
-  if (show) { const vy = -st.vel.y, c = vy < 3 ? 'ok' : vy < 6 ? 'warn' : 'bad'; landerEl.innerHTML = `<span>ALT <b>${Math.max(0, st.pos.y).toFixed(0)}</b> m</span><span class="${c}">↓ <b>${vy.toFixed(1)}</b> m/s</span><span>FUEL <i style="--f:${Math.max(0, st.fuel || 0)}%"></i></span>`; }
+  const show = st.world === 'mars' && (st.mode === 'air' || st.mode === 'rocket') && !MARS.done; landerEl.classList.toggle('on', show); document.body.classList.toggle('landing', show);
+  if (show) { const vy = -st.vel.y, c = vy < 3 ? 'ok' : vy < 6 ? 'warn' : 'bad'; landerEl.innerHTML = `<span>ALT <b>${Math.max(0, st.pos.y - marsFloor(st.pos.x, st.pos.z)).toFixed(0)}</b> m</span><span class="${c}">↓ <b>${vy.toFixed(1)}</b> m/s</span><span>FUEL <i style="--f:${Math.max(0, st.fuel || 0)}%"></i></span>`; }
 }
 /* ============ flight rings: a glowing gate path from above the runway up and round to Mars. Fly through for points ============ */
 const RINGS = { list: [], streak: 0, got: 0, N: 8 };
@@ -2423,6 +2469,43 @@ function marsH(x, z) { // flat landing strip along x = 0, rolling floor, then ca
     return d > 1.6 ? 0 : d < 1 ? -r * .22 * (1 - d * d) : r * .09 * Math.max(0, 1 - (d - 1) / .6) * Math.sin(Math.PI * Math.min(1, (d - 1) / .6 + .5)); })();
   return floor + wall + crater * mSS(30, 60, ax);
 }
+/* ============ Mars ground physics: the car drives on the surface that's drawn (the 15 m terrain mesh), tilts with it, gravity pulls it
+   down the slopes, it flies off crests it takes too fast, and steep canyon walls, big rocks and the honour guard are solid ============ */
+function marsFloor(x, z) { // exactly the drawn triangles: vertices every 15 m on world multiples of 15, each cell split along its b-d diagonal like PlaneGeometry
+  const s = 15, i = Math.floor(x / s), j = Math.floor(z / s), u = x / s - i, v = z / s - j, x0 = i * s, z0 = j * s, hb = marsH(x0, z0 + s), hd = marsH(x0 + s, z0);
+  if (u + v <= 1) { const ha = marsH(x0, z0); return ha + (hd - ha) * u + (hb - ha) * v; }
+  const hc = marsH(x0 + s, z0 + s); return hc + (hb - hc) * (1 - u) + (hd - hc) * (1 - v);
+}
+function floorAt(x, z) { return st.world === 'mars' ? marsFloor(x, z) : groundY(x, z); }
+function marsSurf(pos, F) { // the car on its four tyre patches: ride height and up vector
+  const R = F.clone().cross(Y), f = pos.clone().addScaledVector(F, 1.5), b = pos.clone().addScaledVector(F, -1.5), r = pos.clone().addScaledVector(R, .85), l = pos.clone().addScaledVector(R, -.85);
+  const hF = marsFloor(f.x, f.z), hB = marsFloor(b.x, b.z), hR = marsFloor(r.x, r.z), hL = marsFloor(l.x, l.z);
+  const n = R.clone().multiplyScalar(1.7).setY(hR - hL).cross(F.clone().multiplyScalar(3).setY(hF - hB)).normalize();
+  return { h: Math.max((hF + hB + hR + hL) / 4, marsFloor(pos.x, pos.z) - .08), n };
+}
+function marsSolid(x, z, y, r) { // what's solid at this spot at height y (within r): '' or what it is
+  if (MARS.guard && Math.abs(Math.abs(x) - RWY.half - 8) < 10) for (const g of MARS.guard) { const dx = x - g.x, dz = z - g.z; if (dx * dx + dz * dz < (g.r + r) ** 2 && y < g.top) return g.car ? 'a parked car' : 'the honour guard'; }
+  const ci = Math.round(x / 24), cj = Math.round(z / 24); // the rocks, from the same per-cell hashes that place them
+  for (let cx = ci - 1; cx <= ci + 1; cx++) for (let cz2 = cj - 1; cz2 <= cj + 1; cz2++) {
+    if (Math.abs(cx) > 12 || mHash(cx, cz2, 17) > (Math.abs(cx) < 3 ? .5 : .35)) continue;
+    const rx = cx * 24 + (mHash(cx, cz2, 1) - .5) * 24, rz = cz2 * 24 + (mHash(cx, cz2, 2) - .5) * 24; if (Math.abs(rx) < 3.5) continue;
+    const big = Math.abs(rx) > 14 && mHash(cx, cz2, 6) < .18, sz = big ? 1.2 + mHash(cx, cz2, 7) * 2.6 : .15 + Math.pow(mHash(cx, cz2, 8), 2.5) * .9; if (sz < .55) continue; // pebbles: you drive over them
+    const rr = sz * (.8 + Math.max(mHash(cx, cz2, 13), mHash(cx, cz2, 14)) * .6) * .8, dx = x - rx, dz = z - rz;
+    if (dx * dx + dz * dz < (rr + r) ** 2 && y < marsH(rx, rz) + sz * .45) return 'a rock'; }
+  return '';
+}
+function marsBlocked(pos, F) { for (const k of [1.4, -1.4]) { const p = pos.clone().addScaledVector(F, k), w = marsSolid(p.x, p.z, pos.y + .4, .95); if (w) return w; } return ''; }
+function marsGround(prev, F, dt) { // one ground step on Mars, after the flat move: the surface, slopes, walls, crests
+  let S = marsSurf(st.pos, F); const what = marsBlocked(st.pos, F);
+  if (what || S.n.y < .72) { // a rock, a parked car, a pilot, or ground steeper than ~44 degrees: a wall
+    const sp = Math.abs(st.v); if (sp > 15) { st.pos.y = S.h; st.vel.copy(F).multiplyScalar(st.v); return crash(what ? 'hit ' + what : 'hit a canyon wall'); }
+    st.pos.copy(prev); st.v *= -.2; st.shake = Math.max(st.shake, .3 + sp * .03); S = marsSurf(st.pos, F); }
+  const Fs = F.clone().addScaledVector(S.n, -F.dot(S.n)).normalize(), gv = st.gvel || V(0, 0, 0);
+  const yBall = prev.y + gv.y * dt - .5 * G * dt * dt; st.groundT = (st.groundT || 0) + dt;
+  if (st.v > 6 && st.groundT > .12 && S.h < yBall - .01) { st.pos.y = yBall; takeOff(gv.clone().setY(gv.y - G * dt)); st.w.set(0, 0, 0); return; } // the ground falls away faster than gravity: airborne
+  st.v -= G * Fs.y * dt; // downhill speeds you up, uphill slows you
+  st.pos.y = S.h; st.q.copy(basisQuat(Fs, S.n)); st.vel.copy(Fs).multiplyScalar(st.v); st.gvel = st.vel.clone();
+}
 function buildMars() {
   if (MARS.terrain) return;
   const srgb = (h) => new THREE.Color(h), rust = srgb(0xa9502a), dark = srgb(0x6b3420), dust = srgb(0xc98a5e), basalt = srgb(0x4a2a1e);
@@ -2440,14 +2523,15 @@ function buildMars() {
   rg.computeVertexNormals();
   MARS.rocks = new THREE.InstancedMesh(rg, new THREE.MeshStandardMaterial({ color: 0x6e3b26, roughness: .92, flatShading: true }), 900); MARS.rocks.castShadow = MARS.rocks.receiveShadow = true; MARS.rocks.frustumCulled = false; MARS.group.add(MARS.rocks);
   // sky dome: butterscotch, darker overhead, a white sun with the blue-grey halo Mars sunsets are known for
-  MARS.skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { sunDir: { value: MARS_SUN }, uAlt: { value: 0 } },
+  MARS.skyMat = new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { sunDir: { value: MARS_SUN }, uAlt: { value: 0 }, uHaze: { value: 0 } },
     vertexShader: 'varying vec3 vD; void main(){ vD = normalize(position); vec4 p = modelViewMatrix * vec4(position, 1.); gl_Position = projectionMatrix * p; }',
-    fragmentShader: `uniform vec3 sunDir; uniform float uAlt; varying vec3 vD;
+    fragmentShader: `uniform vec3 sunDir; uniform float uAlt, uHaze; varying vec3 vD;
       void main(){ vec3 d = normalize(vD); float h = d.y, s = max(dot(d, sunDir), 0.), hi = smoothstep(120., 750., uAlt);
         vec3 horizon = mix(vec3(.86, .58, .36), vec3(.62, .38, .24), hi), zenith = mix(vec3(.42, .26, .17), vec3(.05, .035, .04), hi), ground = vec3(.5, .28, .16);
         vec3 c = h > 0. ? mix(horizon, zenith, pow(smoothstep(0., .75, h), .8)) : mix(horizon, ground, smoothstep(0., -.2, h));
         c += vec3(.55, .66, .82) * pow(s, 14.) * .9 + vec3(.9, .85, .8) * pow(s, 3.) * .18; // blue halo round the sun, warm glow wider out
         c += vec3(6.) * smoothstep(.99965, .99985, s); // the sun: about two-thirds the size it looks from Earth
+        c = mix(c, vec3(.95, .55, .32), uHaze); // just in from space: inside the glowing upper air
         gl_FragColor = vec4(c * .92, 1.); }` });
   MARS.sky = new THREE.Mesh(new THREE.SphereGeometry(1300, 48, 24), MARS.skyMat); MARS.sky.renderOrder = -1; MARS.group.add(MARS.sky);
   const earthDot = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, color: 0xbfd8ff, transparent: true, opacity: .8, depthWrite: false, fog: false })); earthDot.scale.setScalar(9); earthDot.userData.dir = V(.6, .1, -.79).normalize(); MARS.earthDot = earthDot; MARS.group.add(earthDot); // the pale blue dot, low in the sky
@@ -2486,7 +2570,7 @@ function buildRunway() {
     for (const [x, step, jitter] of rows) for (let z = 8; z < RWY.len - 8; z += step) { const i = pick(x, z); if (i < 0) continue; per[i].push([x + (mHash(x, z, 21) - .5) * jitter, z]); }
     list.forEach((t, i) => { if (!per[i].length) return; const im = new THREE.InstancedMesh(t.geo, t.mat, per[i].length), M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = V(0, 0, 0), Sc = V(1, 1, 1);
       per[i].forEach(([x, z], j) => { const face = x < 0 ? Math.PI / 2 : -Math.PI / 2, yawJ = (mHash(x, z, 22) - .5) * (t.car ? 1.6 : .7), sc = t.car ? 1 : .94 + mHash(x, z, 23) * .16;
-        P.set(x, marsH(x, RWY.z0 + z), RWY.z0 + z); Q.setFromAxisAngle(Y, face + yawJ + (t.car ? (x < 0 ? -.8 : .8) : 0)); Sc.setScalar(sc); M.compose(P, Q, Sc).multiply(t.rel); im.setMatrixAt(j, M);
+        P.set(x, marsH(x, RWY.z0 + z), RWY.z0 + z); (MARS.guard ||= []).push({ x, z: RWY.z0 + z, r: t.car ? 2.1 : .4, top: P.y + (t.car ? 1.5 : 1.9), car: !!t.car }); Q.setFromAxisAngle(Y, face + yawJ + (t.car ? (x < 0 ? -.8 : .8) : 0)); Sc.setScalar(sc); M.compose(P, Q, Sc).multiply(t.rel); im.setMatrixAt(j, M);
         if (t.car) im.setColorAt(j, new THREE.Color([0xffffff, 0x3a3d42, 0xd8dadd, 0xc23a30, 0x9aa4b0][Math.floor(mHash(x, z, 24) * 5)])); });
       im.castShadow = true; im.receiveShadow = true; G0.add(im); }); };
   if (pilots.length) place(pilots, (x, z) => mHash(x, z, 25) < .82 ? (mHash(x, z, 26) < .6 ? 0 : pilots.length - 1) : -1, [[-(RWY.half + 4), 5, .6], [RWY.half + 4, 5, .6]]);
@@ -2534,7 +2618,7 @@ function setWorld(w) {
 function updateMars() {
   if (st.world !== 'mars') return;
   if (Math.abs(st.pos.z - MARS.cz) > 300) marsRecenter(Math.round(st.pos.z / 300) * 300);
-  MARS.sky.position.copy(camera.position); MARS.skyMat.uniforms.uAlt.value = camera.position.y; scene.fog.density = .00068 * (1 - .65 * mSS(80, 650, camera.position.y)); // thin air: darker sky, less haze from high up
+  MARS.sky.position.copy(camera.position); MARS.skyMat.uniforms.uAlt.value = camera.position.y; const hz = MARS.skyMat.uniforms.uHaze.value; scene.fog.density = .00068 * (1 - .65 * mSS(80, 650, camera.position.y)) + hz * hz * .007; scene.fog.color.setRGB(.78, .54, .35).lerp(new THREE.Color(.92, .56, .33), hz); // thin air: darker sky, less haze from high up; thick glowing haze just after entry
   scene.background.setRGB(.78, .52, .33).lerp(new THREE.Color(.05, .035, .04), mSS(120, 750, camera.position.y)); MARS.earthDot.visible = !MARS.earth; MARS.earthDot.position.copy(camera.position).addScaledVector(MARS.earthDot.userData.dir, 1200);
   if (MARS.earth) { MARS.earth.position.copy(camera.position).addScaledVector(MARS.earth.userData.dir, 1200); MARS.earth.scale.setScalar(1200 * Math.sin(3.2 * Math.PI / 180)); }
   MARS.sun.position.copy(st.pos).addScaledVector(MARS_SUN, 250); MARS.sun.target.position.copy(st.pos); MARS.sun.target.updateMatrixWorld();
@@ -2544,14 +2628,34 @@ function updateMars() {
 const entryEl = document.getElementById('entry');
 function toggleRocket() {
   if (st.phase === 'crashed' || st.finished || MARS.done) return;
+  if (st.mode === 'rocket' && st.world === 'mars' && !st.rk.land) { // diving in: F flips it tail-down for the landing burn, if there's still room
+    if (st.pos.y - marsFloor(st.pos.x, st.pos.z) < LAND_MIN) { pop('TOO LOW', `landing mode needs ${LAND_MIN} m`, 'cool'); hitSound(2); return; }
+    const nose = V(0, 0, -1).applyQuaternion(st.q); let H = V(nose.x, 0, nose.z); if (H.lengthSq() < .01) H = V(st.vel.x, 0, st.vel.z); if (H.lengthSq() < .01) H = fwdOf(st.yaw || 0); H.normalize();
+    Object.assign(st.rk, { land: true, head: H, lt: 0, tx: 0, tz: 0 }); st.yaw = yawOf(H); pop('LANDING MODE', TOUCH_UI ? 'hold BURN' : 'hold W to burn', 'cool'); hitSound(5); return; }
   if (st.mode === 'rocket') { st.mode = 'air'; st.phase = 'air'; st.levelT = 1.2; st.tricks = { z: null, x: null }; st.js = st.js || newJumpStats(); pop('CAR MODE', st.world === 'mars' ? 'land it gently' : '', 'cool'); hitSound(3); return; }
   if (st.mode === 'air' && (st.world === 'mars' || st.pos.y > 12)) {
-    camRel.copy(camPos).sub(st.pos); st.mode = 'rocket'; st.rk = { t: 0, p0: st.pos.clone(), prog: 0, back: fwdOf(st.yaw || 0).negate(), entry: 0, mars: st.world === 'mars' }; pop('ROCKET MODE', st.world === 'mars' ? '' : 'hold W to burn', 'cool'); hitSound(5);
+    camRel.copy(camPos).sub(st.pos); st.mode = 'rocket'; st.rk = { t: 0, p0: st.pos.clone(), prog: 0, back: fwdOf(st.yaw || 0).negate(), entry: 0, mars: st.world === 'mars' }; pop('ROCKET MODE', st.world === 'mars' ? '' : TOUCH_UI ? 'hold BURN' : 'hold W to burn', 'cool'); hitSound(5);
     if (snd.ctx && snd.on) { const c = snd.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(60, t); o.frequency.exponentialRampToValueAtTime(240, t + .5); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.25, t + .05); g.gain.exponentialRampToValueAtTime(.001, t + .7); o.connect(g); g.connect(snd.master); o.start(t); o.stop(t + .75); } }
 }
-function arriveMars() { // Mars filled the view: now high over the middle of the runway, tail down, still falling fast. Time the burn.
-  setWorld('mars'); clearSmoke(); st.pos.set(0, 700, RWY.z0 + 330); st.vel.set(0, -70, 0); st.yaw = Math.PI; st.w.set(0, 0, 0);
-  st.q.copy(basisQuat(Y, V(0, 0, -1))); st.rk = { t: 9, p0: st.pos.clone(), prog: 0, back: V(0, 0, -1), entry: 0, mars: true }; st.fuel = 100; st.js = newJumpStats(); camSnap = true; camRel.set(0, 9, -18);
+const LAND_MIN = 200; // landing mode (tail down) only switches on above this height: lower down there's no room left to stop
+function arriveMars() { // into Mars' air without a cut: the car keeps its attitude, speed and camera, now high over the runway inside the glowing haze, and the air brakes it
+  const up = st.pos.clone().sub(MARS_C).normalize(); let t = st.vel.clone().addScaledVector(up, -st.vel.dot(up));
+  if (t.lengthSq() < .01) { const nose = V(0, 0, -1).applyQuaternion(st.q); t = nose.addScaledVector(up, -nose.dot(up)); } if (t.lengthSq() < 1e-4) t = V(1, 0, 0).addScaledVector(up, -up.x); t.normalize();
+  const D = V(0, 0, 1), M = new THREE.Matrix4().makeBasis(D, Y, D.clone().cross(Y)).multiply(new THREE.Matrix4().makeBasis(t, up, t.clone().cross(up)).transpose()), qM = new THREE.Quaternion().setFromRotationMatrix(M); // local up -> up, the way you're heading -> down the runway
+  const camOff = camPos.clone().sub(st.pos).applyQuaternion(qM), lookOff = camLook.clone().sub(st.pos).applyQuaternion(qM);
+  setWorld('mars'); clearSmoke(); st.marsAge = 0;
+  st.vel.applyQuaternion(qM); st.q.premultiply(qM); st.w.set(0, 0, 0); const vh = Math.hypot(st.vel.x, st.vel.z);
+  st.pos.set(0, 1600, RWY.z0 + 330 - vh / .8); // the air takes most of the forward speed out over the first seconds: about vh / 0.8 metres of drift, so this ends up over the runway
+  if (st.mode === 'rocket') Object.assign(st.rk, { mars: true, land: false }); st.yaw = yawOf(D); st.fuel = 100; st.js = st.js || newJumpStats();
+  camPos.copy(st.pos).add(camOff); camLook.copy(st.pos).add(lookOff); camUp.applyQuaternion(qM); camRel.applyQuaternion(qM); camBack.applyQuaternion(qM).setY(0).normalize(); // the view comes along unchanged
+  if (snd.ctx && snd.on) { const c = snd.ctx, tt = c.currentTime, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); n.buffer = snd.noiseBuf; n.loop = true; f.type = 'lowpass'; f.frequency.setValueAtTime(2400, tt); f.frequency.exponentialRampToValueAtTime(300, tt + 3.5);
+    g.gain.setValueAtTime(.55, tt); g.gain.exponentialRampToValueAtTime(.001, tt + 3.8); n.connect(f); f.connect(g); g.connect(snd.master); n.start(tt); n.stop(tt + 4); } // the roar of the upper air
+}
+function updateEntry() { // the heat glow round the edges: builds as Mars fills the view, fades as the air thins
+  let k = 0, hz = 0;
+  if (st.world === 'mars') { const a = st.marsAge || 0; k = a < 4 ? Math.pow(1 - a / 4, 1.5) : 0; hz = Math.pow(clamp01(1 - a / 3.5), 1.2); }
+  else if (st.mode === 'air' || st.mode === 'rocket') k = smooth(clamp01((MARS_R * 1.45 - st.pos.distanceTo(MARS_C)) / (MARS_R * .35))) * .85;
+  entryEl.style.opacity = k.toFixed(3); if (MARS.skyMat) MARS.skyMat.uniforms.uHaze.value = hz;
 }
 const warpEl = document.getElementById('warp'), wflashEl = document.getElementById('wflash'), marsWinEl = document.getElementById('marsWin');
 function startWarp() {
@@ -2645,7 +2749,7 @@ class SmokePass extends Pass { // raymarches the puffs at half resolution agains
     u.uRed.value = Math.max(floodOn[0], floodOn[1]) * .35; u.fogCol.value.copy(scene.fog.color); u.fogD.value = scene.fog.density;
     const lift = liftGlow[0].material.opacity; car.updateMatrixWorld();
     for (let j = 0; j < 4; j++) { this.tmp.copy(LIFT_NOZ[j]).applyMatrix4(car.matrixWorld); u.uL.value[j].set(this.tmp.x, this.tmp.y - .4, this.tmp.z, .7); u.uLC.value[j].setRGB(.5, .85, 1.25).multiplyScalar(lift * 2.2); }
-    const hp = hero.root.position; u.uL.value[4].set(hp.x, hp.y + .3, hp.z, .5); u.uLC.value[4].setRGB(.5, .85, 1.25).multiplyScalar(hero.root.visible ? hero.light.intensity / 30 * 3 : 0);
+    const hp = hero.root.position; u.uL.value[4].set(hp.x, hp.y + .3, hp.z, .5); u.uLC.value[4].setRGB(.5, .85, 1.25).multiplyScalar(hero.state !== 'off' ? hero.light.intensity / 30 * 3 : 0);
     renderer.setRenderTarget(this.rt); this.q1.render(renderer);
     this.comp.uniforms.tDiffuse.value = readBuffer.texture; this.comp.uniforms.tSmoke.value = this.rt.texture;
     renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer); this.q2.render(renderer);
@@ -2658,6 +2762,15 @@ const smokePass = new SmokePass(); composer.addPass(smokePass);
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(1, 1), .65, .5, .98));
 composer.addPass(new OutputPass());
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+let tuiKey = '';
+function touchUI() { // phones: the buttons say what they do right now
+  if (!TOUCH) return; const rk = st.mode === 'rocket', land = rk && !!(st.rk && st.rk.land), ground = st.mode === 'ground' || st.mode === 'ramp', dive = rk && st.world === 'mars' && !land;
+  const key = [rk, land, ground, dive].join(); if (key === tuiKey) return; tuiKey = key; document.body.classList.toggle('rk', rk);
+  const pad = document.getElementById('rkPad'); pad.querySelector('.pu').textContent = land ? 'FORWARD' : 'NOSE UP'; pad.querySelector('.pd').textContent = land ? 'BACK' : 'NOSE DOWN';
+  const f = document.querySelector('.touchF'); f.textContent = dive ? 'LAND' : land ? 'CAR' : '🚀'; f.classList.toggle('txt', dive || land);
+  const lab = (k, b, i) => { const el = document.querySelector(`#tl button[data-k="${k}"], #tr button[data-k="${k}"]`); if (el) el.innerHTML = `<b>${b}</b><i>${i}</i>`; };
+  lab('KeyA', ground ? '◀' : '⟲', ground ? 'STEER' : 'ROLL'); lab('KeyD', ground ? '▶' : '⟳', ground ? 'STEER' : 'ROLL');
+}
 function setPR(v) { PR.cur = v; renderer.setPixelRatio(v); composer.setPixelRatio(v); resize(); }
 // adaptive resolution: every 1.5 s look at the frame rate; under ~42 fps drop the resolution a step, and only keep the drop if it helped
 // (a phone capped at 30 fps in low-power mode gains nothing, so it goes back to full); steady 57+ fps climbs back up
@@ -2680,7 +2793,7 @@ function frame(now) {
   if (window.__pause) { smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); requestAnimationFrame(frame); return; } // test hook: render only, the sim is stepped by hand
   dynRes(raw); if (running && !st.summary) for (let i = 0; i < 4; i++) step(dt / 4); // the score card pauses the run
   ambT += dt; if (ambT > .12) { ambT = 0; const m = machines[(rnd() * machines.length) | 0]; puff(m.clone().add(V((rnd() - .5) * 4, 0, 0)), V((rnd() - .5) * 2, .4, 2 + rnd() * 2), 2.5, 9, rnd() < .35 ? 0xc87c86 : 0xaab1bb, .32, 2.2); }
-  updateSmoke(dt); updateBillows(dt); updateVol(dt); updateProps(dt); heroUpdate(dt); updateShock(dt); updateCrowd(dt, now / 1000); updateGlow(now / 1000); updateCoils(dt); updateMars(); updateSky(dt, now / 1000); updateRings(dt, now / 1000); updateProgress(); updateFloods(dt); updateCamera(dt); updateAudio(); smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); recFrame(); dashFrame(); netTick(now); aiTick(now);
+  updateSmoke(dt); updateBillows(dt); updateVol(dt); updateProps(dt); heroUpdate(dt); updateShock(dt); updateCrowd(dt, now / 1000); updateGlow(now / 1000); updateCoils(dt); updateMars(); updateEntry(); touchUI(); updateSky(dt, now / 1000); updateRings(dt, now / 1000); updateProgress(); updateFloods(dt); updateCamera(dt); updateAudio(); smokePass.enabled = VOL.ok && VOL.list.length > 0; if (DASH.want) renderPoster(DASH.want); composer.render(); recFrame(); dashFrame(); netTick(now); aiTick(now);
   if (smokePass.enabled) { slowT = (now - last0) > 25 ? slowT + dt : Math.max(0, slowT - dt); if (slowT > 1) smokePass.degrade(); } last0 = now;
   const sp = st.mode === 'air' || st.mode === 'rocket' ? st.vel.length() : Math.abs(st.v);
   const reversing = st.mode === 'ground' && st.v < -.05; spdEl.textContent = (reversing ? 'R ' : '') + Math.round(sp * 3.6);
@@ -2721,5 +2834,5 @@ document.getElementById('startBtn').onclick = () => { unlockAudio(); if (TOUCH &
 addEventListener('keydown', e => { if (document.body.classList.contains('lobby') && e.code === 'Enter' && !(e.target && e.target.tagName === 'INPUT')) document.getElementById('startBtn').click(); });
 setLobby(true);
 go();
-window.__go = () => { setLobby(false); go(); }; window.__dash = DASH; window.__netAdd = p => netAdd(p); window.__snd = snd; window.__rings = RINGS; window.__scene = scene; window.__net = NET; window.__lbRender = d => lbRender(d); window.__camTick = dt => updateCamera(dt); window.__fxTick = dt => { updateSmoke(dt); updateBillows(dt); updateVol(dt); updateCoils(dt); updateMars(); updateSky(dt, performance.now() / 1000); updateRings(dt, performance.now() / 1000); netTick(performance.now()); aiTick(performance.now()); }; window.__vol = VOL; window.__obs = obstacles; window.__smokeCount = () => smoke.filter(k => k.s.visible).length + TR.n + BILL.list.length; window.__hero = hero; window.__heroTick = dt => { heroUpdate(dt); updateShock(dt); }; window.__hit = () => hitsObstacle(); window.__pts = () => carPts(); window.__st = st; window.__spawn = spawn; window.__keys = keys; window.__step = step; window.__showResult = showResult; window.__car = car; window.__cam = camera; window.__gl = renderer; window.__pr = () => ({ ...PR, lite: LITE, dyn: { ...DYN } });
+window.__go = () => { setLobby(false); go(); }; window.__dash = DASH; window.__netAdd = p => netAdd(p); window.__snd = snd; window.__rings = RINGS; window.__scene = scene; window.__net = NET; window.__lbRender = d => lbRender(d); window.__camTick = dt => updateCamera(dt); window.__fxTick = dt => { updateSmoke(dt); updateBillows(dt); updateVol(dt); updateCoils(dt); updateMars(); updateEntry(); updateSky(dt, performance.now() / 1000); updateRings(dt, performance.now() / 1000); netTick(performance.now()); aiTick(performance.now()); }; window.__vol = VOL; window.__obs = obstacles; window.__smokeCount = () => smoke.filter(k => k.s.visible).length + TR.n + BILL.list.length; window.__hero = hero; window.__heroTick = dt => { heroUpdate(dt); updateShock(dt); }; window.__hit = () => hitsObstacle(); window.__pts = () => carPts(); window.__st = st; window.__spawn = spawn; window.__keys = keys; window.__step = step; window.__showResult = showResult; window.__car = car; window.__cam = camera; window.__gl = renderer; window.__mars = MARS; window.__coils = COILS; window.__floor = (x, z) => floorAt(x, z); window.__pr = () => ({ ...PR, lite: LITE, dyn: { ...DYN } });
 </script>
